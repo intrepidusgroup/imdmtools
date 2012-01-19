@@ -1,0 +1,13 @@
+## transaction log
+## this will get filled up with timestamped JSON strings showing commands
+##    issued by the server, and requests/responses from the client.
+## 
+## Be careful, this will likely include sensitive information, like
+##   * Device Tokens
+##   * Devie Unlock Tokens
+##   * Push Certificate Topic (not super sensitive, but still)
+##   * Device information (UDID, phone numbers, blah blah blah)
+##
+## So if you want to send this to anyone, SCRUB IT FIRST
+##
+
