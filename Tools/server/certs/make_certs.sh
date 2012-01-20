@@ -13,12 +13,12 @@ echo "2. Creating the Web Server private key and certificate request"
 echo " ** For 'Common Name' enter your server's IP address **"
 echo ""
 openssl genrsa 2048 > server.key
-openssl req -new -key server.key -out server.csr
+openssl req -new -key server.key -out server.csr 
 
 echo ""
 echo "3. Signing the server key with the CA. You'll the CA passphrase from step 1."
 echo ""
-openssl x509 -req -days 365 -in server.csr -CA cacert.crt -CAkey cakey.key -CAcreateserial -out server.crt
+openssl x509 -req -days 365 -in server.csr -CA cacert.crt -CAkey cakey.key -CAcreateserial -out server.crt -extfile ./server.cnf -extensions ssl_server
 
 
 
