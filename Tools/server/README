@@ -40,18 +40,20 @@ PushCert.pem            Certificate and private key (no passphrase) for APNS
 
 
 [required, you need to make]
-CA.crt                  CA certificate used to sign the server cert 
+CA.crt                  CA certificate used to sign the server cert
                         [load onto device]
 Server.key              Private key (no passphrase) for SSL server
 Server.crt              Certificate for SSL server
 Identity.p12            Device identity cert (for MDM enrollment profile)
-Enroll.mobileconfig     Use IPCU to create profile with MDM payload, 
+Enroll.mobileconfig     Use IPCU to create profile with MDM payload,
                         used to enroll devices
 
 
-
-[optional]
-MyApp.mobileprovision   Mobile provisioning profile for a custom app
+[optional, to test installing custom apps]
+MyApp.ipa               Bundle for a custom iOS app
+MyApp.mobileprovision   Mobile provisioning profile for the custom app
+Manifest.plist          Simple manifest for custom app 
+                        [Manifest.plist.template provided]
 
 
  -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -206,7 +208,6 @@ If you want to try installing different profiles, just build them in IPCU,
 export them to a .mobileconfig file, and copy that over the provided 
 Example.mobileconfig file. Then the "Install Profile" command will send that
 new profile to the testing device.
-
 
 Thanks for playing!
 

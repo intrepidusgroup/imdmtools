@@ -1,0 +1,31 @@
+<plist version="1.0">
+  <dict>
+    <key>items</key>
+    <array>
+      <dict>
+        <key>assets</key>
+        <array>
+          <dict>
+            <key>kind</key>
+            <string>software-package</string>
+            <key>url</key>
+            <string>https://*** SERVER_IP ***:8080/app</string>
+          </dict>
+        </array>
+        <key>metadata</key>
+        <dict>
+          <key>bundle-identifier</key>
+          <string>*** APPLICATION BUNDLE ID (like com.example.myapp) ***</string>
+          <key>bundle-version</key>
+          <string>1.0.0</string>
+          <key>kind</key>
+          <string>software</string>
+          <key>subtitle</key>
+          <string></string>
+          <key>title</key>
+          <string>*** APP NAME ***</string>
+        </dict>
+      </dict>
+    </array>
+  </dict>
+</plist>

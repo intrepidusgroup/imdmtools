@@ -1,4 +1,4 @@
-import web, os, pprint, json, uuid, sys
+import web, os, pprint, json, uuid, sys, re
 from plistlib import *
 from APNSWrapper import *
 from creds import *
@@ -21,9 +21,14 @@ from datetime import datetime
 # * August 2011 - initial release, Black Hat USA
 # * January 2012 - minor tweaks, including favicon, useful README, and 
 #   scripts to create certs, log file, etc.
+# * January 2012 - Added support for some iOS 5 functions. ShmooCon 8.
 #
 
 LOGFILE = 'xactn.log'
+
+MY_ADDR = '<IP ADDRESS>:8080' # The address for the server that you used 
+                             # when setting up the MDM enrollment profile
+    
 
 ###########################################################################
 # Update this to match the UUID in the test provisioning profiles, in order 
@@ -52,6 +57,8 @@ urls = (
     '/enroll', 'enroll_profile',
     '/ca', 'mdm_ca',
     '/favicon.ico', 'favicon',
+    '/manifest', 'app_manifest',
+    '/app', 'app_ipa',
 )
 
 
@@ -63,7 +70,9 @@ def setup_commands():
 
     for cmd in ['DeviceLock', 'ProfileList', 'Restrictions',
         'CertificateList', 'InstalledApplicationList', 
-        'ProvisioningProfileList',
+        'ProvisioningProfileList', 
+# new for iOS 5:
+        'ManagedApplicationList',
 	]:
         ret_list[cmd] = dict( Command = dict( RequestType = cmd ))
 
@@ -157,6 +166,66 @@ def setup_commands():
     else:
         print "Can't find MyApp.mobileprovision in current directory."
 
+#
+# new for iOS 5:
+#
+    ret_list['InstallApplication'] = dict(
+    Command = dict(
+        RequestType = 'InstallApplication',
+        ManagementFlags = 4,  # do not delete app when unenrolling from MDM
+        iTunesStoreID=471966214,  # iTunes Movie Trailers
+    ))
+
+    if ('MyApp.ipa' in os.listdir('.')) and ('Manifest.plist' in os.listdir('.')):
+        ret_list['InstallCustomApp'] = dict(
+        Command = dict(
+            RequestType = 'InstallApplication',
+            ManifestURL = 'https://%s/manifest' % MY_ADDR,
+            ManagementFlags = 1,  # delete app when unenrolling from MDM
+        ))
+    else:
+        print "Need both MyApp.ipa and Manifest.plist to enable InstallCustomApp."
+
+
+    ret_list['RemoveApplication'] = dict(
+    Command = dict(
+        RequestType = 'RemoveApplication',
+        Identifier = 'com.apple.movietrailers',
+    ))
+
+#
+# on an ipad, you'll likely get errors for the "VoiceRoaming" part.
+# Since, you know...it's not a phone.
+#
+    ret_list['Settings'] = dict(
+    Command = dict(
+        RequestType = 'Settings',
+        Settings = [
+            dict(
+                Item = 'DataRoaming',
+                Enabled = False,
+            ),
+            dict(
+                Item = 'VoiceRoaming',
+                Enabled = True,
+            ),
+        ]
+        ))
+
+#
+# haven't figured out how to make this one work yet. :(
+#
+#    ret_list['ApplyRedemptionCode'] = dict(
+#    Command = dict(
+#        RequestType = 'ApplyRedemptionCode',
+## do I maybe need to add an iTunesStoreID in here?
+#        RedemptionCode = '3WABCDEFGXXX',
+#        iTunesStoreID=471966214,  # iTunes Movie Trailers
+#        ManagementFlags = 1,
+#    ))
+
+
+
     return ret_list
 
 
@@ -220,6 +289,8 @@ class do_mdm:
             rd = dict()
             if pl.get('MessageType') == 'Authenticate':
                 print HIGH+"Authenticate"+NORMAL
+            elif pl.get('MessageType') == 'CheckOut':
+                print HIGH+"Device leaving MDM"+ NORMAL
             else:
                 print HIGH+"(other)"+NORMAL
                 print HIGH, pl, NORMAL
@@ -341,6 +412,27 @@ class favicon:
             web.header('Content-Type', 'image/x-icon;charset=utf-8')
 #            web.header('Content-Disposition', 'attachment;filename="favicon.ico"')
             return open('favicon.ico', "rb").read()
+        else:
+            raise web.notfound()
+
+
+class app_manifest:
+    def GET(self):
+
+        if 'Manifest.plist' in os.listdir('.'):
+            web.header('Content-Type', 'text/xml;charset=utf-8')
+            return open('Manifest.plist', "rb").read()
+        else:
+            raise web.notfound()
+
+
+class app_ipa:
+    def GET(self):
+
+        if 'MyApp.ipa' in os.listdir('.'):
+            web.header('Content-Type', 'application/octet-stream;charset=utf-8')
+            web.header('Content-Disposition', 'attachment;filename="MyApp.ipa"')
+            return open('MyApp.ipa', "rb").read()
         else:
             raise web.notfound()
 
