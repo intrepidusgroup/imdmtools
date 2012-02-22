@@ -10,13 +10,21 @@ whitepaper elsewhere in this repository.
                                 Requirements
  -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-* python, including web.py framework
+software:
+* python
+* python libraries:
+  * web.py: http://webpy.org/ 
+  * M2Crypto: http://chandlerproject.org/bin/view/Projects/MeTooCrypto
 * OpenSSL (to create certs)
+* Iphone Configuration Utility (free from Apple) 
+
+credentials:
 * Apple Push Notification Service (APNS) certificate, from Apple
+
+network configuration:
 * Outbound access from server to gateway.push.apple.com (tcp port 2195)
 * Outbound access from device to gateway.push.apple.com (tcp port 5223)
 * Inbound access from device to port 8080 on your test server
-* Iphone Configuration Utility (free from Apple) 
 
 
  -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -147,10 +155,17 @@ you created. You'll want to enter the passphrase you created for the .p12
 file into the Certificate payload, otherwise you'll have to enter it on the
 device every time you re-enroll. (and you may be re-enrolling a lot. :) )
 
-
 Save this configuration. In IPCU, go to File -> Export, select "none" for
 security (no signing, no encryption), then Next, and give it a filename.
 Copy the file to the server folder as "Enroll.mobileconfig." 
+
+Now, it gets tricky.  The latest version of IPCU (3.4) does NOT include the 
+proper settings for installing and managing applications. So you need to:
+
+  * Edit the Enroll.mobileconfig file (in your favorite appropriate editor)
+  * Find the "AccessRights" key (probably near the top of PayloadConent)
+  * Change the value from 2047 (default for all rights) to 8191 (all for iOS5)
+  * Save it and exit
 
                         -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 

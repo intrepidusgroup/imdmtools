@@ -4,6 +4,9 @@ from APNSWrapper import *
 from creds import *
 from datetime import datetime
 
+# needed to handle verification of signed messages from devices
+from M2Crypto import SMIME, X509, BIO
+
 #
 # Simple, basic, bare-bones example test server
 # Implements Apple's Mobile Device Management (MDM) protocol
@@ -17,17 +20,32 @@ from datetime import datetime
 
 #
 # Revision History:
-# 
-# * August 2011 - initial release, Black Hat USA
-# * January 2012 - minor tweaks, including favicon, useful README, and 
-#   scripts to create certs, log file, etc.
-# * January 2012 - Added support for some iOS 5 functions. ShmooCon 8.
+#  
+# * August 2011    - initial release, Black Hat USA
+# * January 2012   - minor tweaks, including favicon, useful README, and 
+#                    scripts to create certs, log file, etc.
+# * January 2012   - Added support for some iOS 5 functions. ShmooCon 8.
+# * February 2012  - Can now verify signed messages from devices
+#                  - Tweaks to CherryPy startup to avoid errors on console  
 #
 
 LOGFILE = 'xactn.log'
 
 MY_ADDR = '<IP ADDRESS>:8080' # The address for the server that you used 
                              # when setting up the MDM enrollment profile
+
+# 
+# set up some smime objects to verify signed messages coming from devices
+#
+sm_obj = SMIME.SMIME()
+x509 = X509.load_cert('identity.crt')
+sk = X509.X509_Stack()
+sk.push(x509)
+sm_obj.set_x509_stack(sk)
+
+st = X509.X509_Store()
+st.load_info('CA.crt')
+sm_obj.set_x509_store(st)
     
 
 ###########################################################################
@@ -37,8 +55,9 @@ MY_ADDR = '<IP ADDRESS>:8080' # The address for the server that you used
 my_test_provisioning_uuid = 'REPLACE-ME-WITH-REAL-UUIDSTRING'
 
 from web.wsgiserver import CherryPyWSGIServer
-CherryPyWSGIServer.ssl_certificate = "Server.crt"
-CherryPyWSGIServer.ssl_private_key = "Server.key"
+from web.wsgiserver.ssl_builtin import BuiltinSSLAdapter
+
+CherryPyWSGIServer.ssl_adapter = BuiltinSSLAdapter('Server.crt', 'Server.key', None)
 
 ###########################################################################
 
@@ -257,7 +276,7 @@ class queue_cmd:
 
 
 class do_mdm:        
-    global last_result
+    global last_result, sm_obj
     def PUT(self):
         global current_command, last_result
         HIGH='[1;31m'
@@ -266,7 +285,30 @@ class do_mdm:
 
         i = web.data()
         pl = readPlistFromString(i)
-#        print i
+
+        if 'HTTP_MDM_SIGNATURE' in web.ctx.environ:
+            raw_sig = web.ctx.environ['HTTP_MDM_SIGNATURE']
+            cooked_sig = '\n'.join(raw_sig[pos:pos+76] for pos in xrange(0, len(raw_sig), 76))
+    
+            signature = """
+-----BEGIN PKCS7-----
+%s
+-----END PKCS7-----
+""" % cooked_sig
+
+
+            #print i
+            #print signature
+
+            buf = BIO.MemoryBuffer(signature)
+            p7 = SMIME.load_pkcs7_bio(buf)
+            data_bio = BIO.MemoryBuffer(i)
+            try:
+                v = sm_obj.verify(p7, data_bio)
+                if v:
+                    print "Client signature verified."
+            except:
+                print "*** INVALID CLIENT MESSAGE SIGNATURE ***"
 
         print "%sReceived %4d bytes: %s" % (HIGH, len(web.data()), NORMAL),
 
