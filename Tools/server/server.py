@@ -18,6 +18,10 @@ from M2Crypto import SMIME, X509, BIO
 # Copyright 2011, Intrepidus Group
 # http://intrepidusgroup.com
 
+# Reuse permitted under terms of BSD License (see LICENSE file).
+# No warranties, expressed or implied.
+# This is experimental software, for research only. Use at your own risk.
+
 #
 # Revision History:
 #  
