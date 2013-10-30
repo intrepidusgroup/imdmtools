@@ -48,3 +48,4 @@ cp identity.p12 ../server/Identity.p12
 echo "7. Generating keys and certs for plist generation"
 openssl req -inform pem -outform der -in identity.csr -out customer.der
 cp Identity.p12 vendor.p12
+cp identity.csr customer.csr
