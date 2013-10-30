@@ -36,10 +36,15 @@ echo ""
 openssl x509 -req -days 365 -in identity.csr -CA cacert.crt -CAkey cakey.key -CAcreateserial -out identity.crt
 openssl pkcs12 -export -out identity.p12 -inkey identity.key -in identity.crt -certfile cacert.crt
 
-echo ""
-echo "6. Copying keys and certs to parent folder"
-cp server.key ../Server.key
-cp server.crt ../Server.crt
-cp cacert.crt ../CA.crt
-cp identity.p12 ../Identity.p12
 
+
+echo ""
+echo "6. Copying keys and certs to server folder"
+cp server.key ../server/Server.key
+cp server.crt ../server/Server.crt
+cp cacert.crt ../server/CA.crt
+cp identity.p12 ../server/Identity.p12
+
+echo "7. Generating keys and certs for plist generation"
+openssl req -inform pem -outform der -in identity.csr -out customer.der
+cp Identity.p12 vendor.p12
