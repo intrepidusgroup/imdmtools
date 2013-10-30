@@ -10,8 +10,8 @@ Instructions and code for setting up a simple iOS Mobile Device Management (MDM)
  * openssl command-line
  * Java SDK (java/javac)
  * Apple's iPhone Configuration Utility
-   * (OS X Version)[http://support.apple.com/kb/dl1465]
-   * (Windows Version)[http://support.apple.com/kb/DL1466]
+    * (OS X Version)[http://support.apple.com/kb/dl1465]
+    * (Windows Version)[http://support.apple.com/kb/DL1466]
 
 # Certificate Setup
 
@@ -46,6 +46,9 @@ Now that all certificates are in place, compile and run the java program
 
 You should now have **plist_encoded.plist**.  Upload this to [Apple's Push Certificates Portal](https://identity.apple.com/pushcert/).  If all was successfull you will see a screen similar to below:
 
+![Apple Portal](images/certPortal.png)
+
+
 Notice the (i) icon besides renew.  If you click it there will be a long string of text ending in **UID=com.apple.mgmt...**, make sure to copy that string starting at **com** since you will need it later.  Finally download the certificate, save as **PushCert.pem** in the **server** directory.
 
 # Enrollment profile
@@ -69,7 +72,14 @@ Open the **iPhone Configuration Utilities** program.  Select **Configuration Pro
    * Security: Check all that you want
    * Use Development APNS server: Uncheck
 
-After you are finished, highlight the entry in the table, and click **Export**.  Choose **None** for security and then **Export...**.  Save in the **mdm-server/server/** directory as **Enroll**.  You should now have an **Enroll.mobileconfig** file.
+Your screen should be similar to the following:
+![Enrollment Configuration](images/enrollConfig.png)
+
+After you are finished, highlight the entry in the table, and click **Export**.  Choose **None** for security and then **Export...**.  The export window should look like:  
+![Enrollment Export](images/enrollExport.png)
+
+Save in the **mdm-server/server/** directory as **Enroll**.  You should now have an **Enroll.mobileconfig** file.
+
 
 # Server Setup
 
@@ -97,6 +107,12 @@ Once there you need to, in order:
  2. Tap here to enroll in MDM 
  3. Select Command (Device Lock is a good one to test)
 
-You can now run those commands from any web browser, a successfull command will often looks something like the following:
+---
+![Device Enrollment Steps](images/deviceEnroll.png)
+---
 
+You can now run those commands from any web browser, a successfull command will often looks something like the following:
+---
+![Command Success](images/commandSuccess.png)
+---
 You may have to hit the **refresh** link, if the output doesn't look recent.
