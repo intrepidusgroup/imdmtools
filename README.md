@@ -112,6 +112,7 @@ Once there you need to, in order:
 ---
 
 You can now run those commands from any web browser, a successfull command will often looks something like the following:
+
 ---
 ![Command Success](images/commandSuccess.png)
 ---
