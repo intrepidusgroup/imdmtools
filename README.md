@@ -117,3 +117,34 @@ You can now run those commands from any web browser, a successfull command will 
 ![Command Success](images/commandSuccess.png)
 ---
 You may have to hit the **refresh** link, if the output doesn't look recent.
+
+# Client Reporting
+
+The MDM server also has REST endpoints for reporting issues and geolocation data from the enrolled clients.  The API can be imported into any project as follows:
+
+* Click on the top level Project item and add files ("option-command-a")
+* Navigate to client-reporting/
+* Highlight the client-reporting subdirectory
+* Click the Add button
+
+The library provides the following functions:
+
+    +(void) setHostAddress: (NSString*) host; // Set where the MDM server lives
+    +(void) setPause : (BOOL) toggle; // Toggle whether to add a thread execution pause to allow requests to finish
+    +(void) reportJailbreak;  // Report that the device has been jailbroken
+    +(void) reportDebugger; // Report that the application has a debugger attached
+    +(void) reportLocation : (CLLocationCoordinate2D*) coords; // Report the lat/lon location of the device
+    
+"setHostAddress" and "setPause" are meant to be set once only, and effect all "report" calls.  An example usage may look like:
+
+    // Code in application init
+    [client_reporting setHostAddress:@"192.168.0.0"];
+    [client_reporting setPause:YES];
+    
+    // Later code during execution
+    [client_reporting reportDebugger]
+
+This client API can be coupled with the [iMAS security-check controls](git@github.com:project-imas/security-check.git) to provide accurate reporting of jailbreak and debugger detection.  
+
+
+
