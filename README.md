@@ -1,6 +1,6 @@
 # Overview
 
-Instructions and code for setting up a simple iOS Mobile Device Management (MDM) server.  MDM allows for OS level control of a device from a centralized location.  A remote administrator can install/remove apps, install/revoke certificates, lock the device, change password requirements, etc.  
+Instructions and code for setting up a simple iOS Mobile Device Management (MDM) server.  MDM allows for OS level control of multiple devices from a centralized location.  A remote administrator can install/remove apps, install/revoke certificates, lock the device, change password requirements, etc.  
 
 # Prerequisites
 
@@ -99,7 +99,7 @@ Network Settings
   * Inbound access to port 8080
   * iOS device must also have outbound access to gateway.push.apple.com:5223
 
-If everything is setup appropriately, simply navigate to the **server** directory and run **python server.py**.
+If everything is setup appropriately, simply navigate to the **scripts** directory and run **./daemonScript.sh**.
 
 On the device navigate to: **https://YOUR_HOST:8080/**
 Once there you need to, in order: 
