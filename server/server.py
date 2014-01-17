@@ -2,6 +2,7 @@ import web, os, pprint, json, uuid, sys, re
 from plistlib import *
 from APNSWrapper import *
 from creds import *
+from problems import *
 from datetime import datetime
 
 # needed to handle verification of signed messages from devices
@@ -31,12 +32,17 @@ from M2Crypto import SMIME, X509, BIO
 # * January 2012   - Added support for some iOS 5 functions. ShmooCon 8.
 # * February 2012  - Can now verify signed messages from devices
 #                  - Tweaks to CherryPy startup to avoid errors on console  
-#
+# * January 214    - Support for multiple enrollments
+#                  - Supports reporting problems
 
 LOGFILE = 'xactn.log'
 
-MY_ADDR = '<IP ADDRESS>:8080' # The address for the server that you used 
-                             # when setting up the MDM enrollment profile
+# Dummy socket to get the hostname
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect(('google.com', 0))
+
+# NOTE: Will need to overwrite this if behind a firewall
+MY_ADDR = s.getsockname()[0] + ":8080"
 
 # 
 # set up some smime objects to verify signed messages coming from devices
@@ -82,6 +88,9 @@ urls = (
     '/favicon.ico', 'favicon',
     '/manifest', 'app_manifest',
     '/app', 'app_ipa',
+    '/problem', 'do_problem',
+    '/problemjb', 'do_problem',
+    '/resetp', 'do_resetp',
 )
 
 
@@ -133,7 +142,7 @@ def setup_commands():
     ret_list['ClearPasscode'] = dict(
         Command = dict(
             RequestType = 'ClearPasscode',
-            UnlockToken = Data(my_UnlockToken)
+            # UnlockToken = Data(my_UnlockToken)
         )
     )
 
@@ -206,6 +215,7 @@ def setup_commands():
             ManifestURL = 'https://%s/manifest' % MY_ADDR,
             ManagementFlags = 1,  # delete app when unenrolling from MDM
         ))
+        print ret_list['InstallCustomApp']
     else:
         print "Need both MyApp.ipa and Manifest.plist to enable InstallCustomApp."
 
@@ -214,6 +224,12 @@ def setup_commands():
     Command = dict(
         RequestType = 'RemoveApplication',
         Identifier = 'com.apple.movietrailers',
+    ))
+
+    ret_list['RemoveCustomApplication'] = dict(
+    Command = dict(
+        RequestType = 'RemoveApplication',
+        Identifier = 'mitre.managedTest',
     ))
 
 #
@@ -259,21 +275,32 @@ class root:
 class queue_cmd:
     def GET(self):
         global current_command, last_sent
-        global my_DeviceToken, my_PushMagic
-        i = web.input()
-        cmd = i.command
+        global devList
 
-        cmd_data = mdm_commands[cmd]
-        cmd_data['CommandUUID'] = str(uuid.uuid4())
-        current_command = cmd_data
-        last_sent = pprint.pformat(current_command)
+        devListPrime = []
+        i = web.input(device=[])
+        for dev in i.device:
+            creds = dev.split(' -- ')
+            for devP in devList:
+                if creds[0] == devP[1]:
+                    devListPrime.append(devP)
 
-        wrapper = APNSNotificationWrapper('PushCert.pem', False)
-        message = APNSNotification()
-        message.token(my_DeviceToken)
-        message.appendProperty(APNSProperty('mdm', my_PushMagic))
-        wrapper.append(message)
-        wrapper.notify()
+        for dev_creds in devListPrime:
+            mylocal_PushMagic = dev_creds[1]
+            mylocal_DeviceToken = dev_creds[2]
+
+            cmd = i.command
+            cmd_data = mdm_commands[cmd]
+            cmd_data['CommandUUID'] = str(uuid.uuid4())
+            current_command = cmd_data
+            last_sent = pprint.pformat(current_command)
+
+            wrapper = APNSNotificationWrapper('PushCert.pem', False)
+            message = APNSNotification()
+            message.token(mylocal_DeviceToken)
+            message.appendProperty(APNSProperty('mdm', mylocal_PushMagic))
+            wrapper.append(message)
+            wrapper.notify()
 
         return home_page()
 
@@ -347,6 +374,9 @@ class do_mdm:
 #        print LOW, out, NORMAL
 
         q = pl.get('QueryResponses')
+        last_result = pprint.pformat(pl)
+        return out
+'''
         if q:
             redact_list = ('UDID', 'BluetoothMAC', 'SerialNumber', 'WiFiMAC',
                 'IMEI', 'ICCID', 'SerialNumber')
@@ -356,13 +386,12 @@ class do_mdm:
         for top in ('UDID', 'Token', 'PushMagic', 'UnlockToken'):
             if pl.get(top):
                 pl[top] = '--redacted--'
-
-        last_result = pprint.pformat(pl)
-        return out
+'''
 
 
 def home_page():
-    global mdm_commands, last_result, last_sent, current_command
+    global mdm_commands, last_result, last_sent, problems, current_command
+    global devList
 
     drop_list = ''
     for key in sorted(mdm_commands.iterkeys()):
@@ -372,27 +401,46 @@ def home_page():
             selected = ''
         drop_list += '<option value="%s" %s>%s</option>\n'%(key,selected,key)
 
+    dev_drop_list = ''
+    for dev_creds in devList:
+        dev = dev_creds[1] + ' -- ' + dev_creds[0]
+        dev_drop_list += '<option value="%s" >%s</option>\n'%(dev,dev)
+
+    enrollCommands = ""
+    agentStr = web.ctx.env['HTTP_USER_AGENT']
+    print agentStr
+    if ("(iPhone;" in agentStr) or ("(iPad;" in agentStr):
+        enrollCommands="""<td align="center">Tap <a href='/enroll'>here</a> to <br/>enroll in MDM</td>
+            <td align="right">Tap <a href='/ca'>here</a> to install the <br/> CA Cert (for Server/Identity)</td>"""
     out = """
 <html><head><title>MDM Test Console</title></head><body>
 <table border='0' width='100%%'><tr><td>
 <form method="GET" action="/queue">
+  <tr>%s</tr>
+  <tr><td>
   <select name="command">
   <option value=''>Select command</option>
 %s
   </select>
   <input type=submit value="Send"/>
-</form></td>
-<td align="center">Tap <a href='/enroll'>here</a> to <br/>enroll in MDM</td>
-<td align="right">Tap <a href='/ca'>here</a> to install the <br/> CA Cert (for Server/Identity)</td>
-</tr></table>
+  <hr/>
+  Select Device:<BR/>
+  <select name="device" multiple="multiple">
+%s
+  </select>
+  <input type=submit value="Send"/>
+</form></td></tr></table>
 <hr/>
 <b>Last command sent</b>
 <pre>%s</pre>
 <hr/>
 <b>Last result</b> (<a href="/">Refresh</a>)
 <pre>%s</pre>
+<hr/>
+<b>Problems Detected: </b> 
+<pre>%s</pre>
 </body></html>
-""" % (drop_list, last_sent, last_result)
+""" % (enrollCommands, drop_list, dev_drop_list, last_sent, last_result, "\n".join(problems))
 
     return out
 
@@ -410,16 +458,10 @@ def do_TokenUpdate(pl):
             UnlockToken = Data(my_UnlockToken)
         )
     )
-
-    out = """
-# these will be filled in by the server when a device enrolls
-
-my_PushMagic = '%s'
-my_DeviceToken = %s
-my_UnlockToken = %s
-""" % (my_PushMagic, repr(my_DeviceToken), repr(my_UnlockToken))
-
-#    print out
+    newTuple = (web.ctx.ip, my_PushMagic, repr(my_DeviceToken), repr(my_UnlockToken))
+    devList.append(newTuple)
+    # devList = set(devList)
+    out = "devList = %s" % devList
 
     fd = open('creds.py', 'w')
     fd.write(out)
@@ -431,7 +473,6 @@ my_UnlockToken = %s
 
 class enroll_profile:
     def GET(self):
-
         if 'Enroll.mobileconfig' in os.listdir('.'):
             web.header('Content-Type', 'application/x-apple-aspen-config;charset=utf-8')
             web.header('Content-Disposition', 'attachment;filename="Enroll.mobileconfig"')
@@ -439,6 +480,28 @@ class enroll_profile:
         else:
             raise web.notfound()
 
+class do_problem:
+    def GET(self):
+        global problems
+        problem_detect = ' ('
+        problem_detect += datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if web.ctx.path == "/problem":
+            problem_detect += ') Debugger attached to '
+        elif web.ctx.path == "/problemjb":
+            problem_detect += ') Jailbreak detected for ' 
+        problem_detect += web.ctx.ip
+
+        problems.insert(0, problem_detect)
+        out = """
+problems = %s""" % problems
+        fd = open('problems.py', 'w')
+        fd.write(out)
+        fd.close()
+
+class do_resetp:
+    def GET(self):
+        global problems
+        problems=[]
 
 class mdm_ca:
     def GET(self):
@@ -487,7 +550,6 @@ class app_ipa:
 mdm_commands = setup_commands()
 current_command = mdm_commands['DeviceLock']
 
-
 def log_data(out):
     fd = open(LOGFILE, "a")
     fd.write(datetime.now().ctime())
@@ -497,4 +559,9 @@ def log_data(out):
 if __name__ == "__main__":
     print "Starting Server" 
     app = web.application(urls, globals())
+    app.internalerror = web.debugerror
     app.run()
+    try:
+        app.run()
+    except:
+        os._exit(0)
