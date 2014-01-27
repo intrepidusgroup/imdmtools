@@ -147,4 +147,7 @@ The library provides the following functions:
 This client API can be coupled with the [iMAS security-check controls](git@github.com:project-imas/security-check.git) to provide accurate reporting of jailbreak and debugger detection.  
 
 
+[![githalytics.com alpha](https://cruel-carlota.pagodabox.com/0c9bbae3fb28ec1360fcabae694be189 "githalytics.com")](http://githalytics.com/project-imas/mdm-server)
+
+
 
