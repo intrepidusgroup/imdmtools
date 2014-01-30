@@ -17,7 +17,7 @@ Instructions and code for setting up a simple iOS Mobile Device Management (MDM)
 
 First run **make_certs.sh**.  Hopefully this works properly and generates 90% of what you need.
 
-Download the [MDM vendor CSR signing tool](http://www.softhinker.com/in-the-news/iosmdmvendorcsrsigning/Softhinker.zip) from [Softhinker](http://www.softhinker.com/).  You will notice several certificates are included:
+In the vendor-signing directory, under com/softhinker, you will notice several certificates are included:
  * customer.der
    * Must be replaced
    * Generated from **make_certs.sh**
@@ -38,11 +38,7 @@ Download the [MDM vendor CSR signing tool](http://www.softhinker.com/in-the-news
    * Must be replaced
    * Generated from **make_certs.sh**
 
-Now that all certificates are in place, compile and run the java program
-    cd Softhinker/src/com/softhinker
-    javac -cp "../../../lib/dom4j-1.6.1.jar:./" Test.java 
-    cd ../../
-    java -cp ".././lib/dom4j-1.6.1.jar:./" com.softhinker.Test
+Now that all certificates are in place, run **vendor-signing.sh** under the scripts directory.
 
 You should now have **plist_encoded.plist**.  Upload this to [Apple's Push Certificates Portal](https://identity.apple.com/pushcert/).  If all was successfull you will see a screen similar to below:
 
