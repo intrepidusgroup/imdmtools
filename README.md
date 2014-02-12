@@ -15,7 +15,7 @@ Instructions and code for setting up a simple iOS Mobile Device Management (MDM)
 
 # Certificate Setup
 
-First in the **scripts** directory, modify **server.cnf** replacing **<SERVER_IP>** with your server's IP address. Next run **make_certs.sh**, be careful to read the directions at the top of each step (Usually specifying the 'Common Name' needed).  Hopefully this works properly and generates 90% of what you need.
+First in the **scripts** directory, modify **server.cnf** replacing **&lt;SERVER_IP&gt;** with your server's IP address. Next run **make_certs.sh**, be careful to read the directions at the top of each step (Usually specifying the 'Common Name' needed).  Hopefully this works properly and generates 90% of what you need.
 
 In the vendor-signing directory, under com/softhinker, you will notice several certificates are included:
  * customer.der
