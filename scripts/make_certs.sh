@@ -49,3 +49,14 @@ echo "7. Generating keys and certs for plist generation"
 openssl req -inform pem -outform der -in identity.csr -out customer.der
 cp Identity.p12 vendor.p12
 cp identity.csr customer.csr
+
+echo "8. Getting Apple certificates online"
+
+curl https://developer.apple.com/certificationauthority/AppleWWDRCA.cer -o AppleWWDRCA.cer
+curl http://www.apple.com/appleca/AppleIncRootCertificate.cer -o AppleIncRootCertificate.cer
+
+openssl x509 -inform der -in AppleWWDRCA.cer -out intermediate.pem
+openssl x509 -inform der -in AppleIncRootCertificate.cer -out root.pem
+
+cp intermediate.pem ../vendor-signing/com/softhinker/intermediate.pem
+cp root.pem ../vendor-signing/com/softhinker/root.pem

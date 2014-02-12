@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Enumeration;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -82,7 +83,7 @@ public class Test {
 
 	private byte[] signCSR(PrivateKey privateKey, byte[] csr) throws Exception {
 		Signature sig = Signature.getInstance("SHA1WithRSA");
-		sig.initSign(privateKey);
+                sig.initSign(privateKey);
 		sig.update(csr);
 		byte[] signatureBytes = sig.sign();
 		return signatureBytes;
@@ -90,11 +91,16 @@ public class Test {
 	
 	private PrivateKey extractPrivateKey(String path2keystore) throws KeyStoreException, NoSuchAlgorithmException, CertificateException, FileNotFoundException, IOException, UnrecoverableKeyException
 	{
-		String alias = "test";//Change to your alias
+		String alias = "1";//Change to an alias listed below
 		String password = "test";//Change to your password
 		
 		KeyStore caKs = KeyStore.getInstance("PKCS12");
 		caKs.load(new FileInputStream(new File(path2keystore)), password.toCharArray());
+                
+                System.out.println("--------ALIASES----------");
+                for (Enumeration<String> e = (caKs.aliases()); e.hasMoreElements();)
+                    System.out.println(e.nextElement());
+                System.out.println("-------------------------");
 		Key key = caKs.getKey(alias, password.toCharArray());
 		return (PrivateKey)key;
 	}
