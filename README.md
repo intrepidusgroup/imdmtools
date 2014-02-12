@@ -23,7 +23,7 @@ In the vendor-signing directory, under com/softhinker, you will notice several c
    * Generated from **make_certs.sh**
    * Accept defaults for all other values (Including **Challenge password**)
  * intermediate.pem 
-   * Does not need replaced
+   * Automatically replace by make_certs
    * Apple's WWDR intermediate certificate
  * mdm.pem
    * Must be replaced
@@ -32,15 +32,15 @@ In the vendor-signing directory, under com/softhinker, you will notice several c
    * Download the file, should be in .cer format
    * Convert to pem: **openssl x509 -inform der -in YOUR_MDM.cer -out mdm.pem**
  * root.pem
-   * Does not need replaced
+   * Automatically replace by make_certs
    * Apple's root certificate
  * vendor.p12
    * Must be replaced
    * Generated from **make_certs.sh**
 
-Now that all certificates are in place, run **vendor-signing.sh** under the scripts directory.
+Now that all certificates are in place, find **Test.java** under vendor-signing/com/softhinker. On line 95, change <code>password = "test";</code> to use your password specified during **make_certs.sh** step 1.  
 
-You should now have **plist_encoded.plist**.  Upload this to [Apple's Push Certificates Portal](https://identity.apple.com/pushcert/).  If all was successfull you will see a screen similar to below:
+Run **vendor-signing.sh** under the scripts directory. You should now have **plist_encoded.plist** in the **vendor-signing** directory.  Upload this to [Apple's Push Certificates Portal](https://identity.apple.com/pushcert/).  If all was successfull you will see a screen similar to below:
 
 ![Apple Portal](images/certPortal.png)
 
