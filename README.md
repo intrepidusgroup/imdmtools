@@ -143,6 +143,12 @@ The library provides the following functions:
 This client API can be coupled with the [iMAS security-check controls](git@github.com:project-imas/security-check.git) to provide accurate reporting of jailbreak and debugger detection.  
 
 
+Some sticking points that folks may run into:
+* Modify "scripts/server.cnf" to have your server's IP address in place of <SERVER_IP>. 
+* Be careful to follow the prompts for each step of make_certs.sh, you do need to put things for common name when asked.
+* I just updated make_certs.sh to to grab the Apple certs needed directly (Requires curl), it looks like they were missing from the repo (0 length).
+
+
 [![githalytics.com alpha](https://cruel-carlota.pagodabox.com/0c9bbae3fb28ec1360fcabae694be189 "githalytics.com")](http://githalytics.com/project-imas/mdm-server)
 
 
