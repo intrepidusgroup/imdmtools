@@ -1,4 +1,4 @@
-# Overview
+# Overview[![analytics](http://www.google-analytics.com/collect?v=1&t=pageview&_s=1&dl=https%3A%2F%2Fgithub.com%2Fproject-imas%2Fmdm-server&_u=MAC~&cid=1757014354.1393964045&tid=UA-38868530-1)]()
 
 Instructions and code for setting up a simple iOS Mobile Device Management (MDM) server.  MDM allows for OS level control of multiple devices from a centralized location.  A remote administrator can install/remove apps, install/revoke certificates, lock the device, change password requirements, etc.  
 
@@ -147,9 +147,5 @@ Some sticking points that folks may run into:
 * Modify "scripts/server.cnf" to have your server's IP address in place of <SERVER_IP>. 
 * Be careful to follow the prompts for each step of make_certs.sh, you do need to put things for common name when asked.
 * I just updated make_certs.sh to to grab the Apple certs needed directly (Requires curl), it looks like they were missing from the repo (0 length).
-
-
-[![githalytics.com alpha](https://cruel-carlota.pagodabox.com/0c9bbae3fb28ec1360fcabae694be189 "githalytics.com")](http://githalytics.com/project-imas/mdm-server)
-
 
 
