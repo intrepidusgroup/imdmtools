@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="">
+    <meta name="description" content="MDM Server Control">
     <meta name="author" content="Rory Thrasher">
     <link rel="shortcut icon" href="../../assets/ico/favicon.ico">
 
@@ -15,9 +15,6 @@
 
     <!-- Custom styles for this template -->
     <link href="./starter-template.css" rel="stylesheet">
-
-    <!-- Just for debugging purposes. Don't actually copy this line! -->
-    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
 
     <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
@@ -31,12 +28,12 @@
 
   <div class="container">    
 
-      <div id="showEnroll" style="display:none" class="row col-md-6" align="center">Tap <a href='/enroll'>here</a> to <br/>enroll in MDM</div>
-      <div id="showCert" style="display:none" class="row col-md-6" align="center">Tap <a href='/ca'>here</a> to install the <br/> CA Cert (for Server/Identity)</div>
+      <div id="showEnroll" style="display:none" class="row col-sm-6" align="center">Tap <a href='/enroll'>here</a> to <br/>enroll in MDM</div>
+      <div id="showCert" style="display:none" class="row col-sm-6" align="center">Tap <a href='/ca'>here</a> to install the <br/> CA Cert (for Server/Identity)</div>
 
       <div class="starter-template">
-        <h1>MDM Server</h1>
-        <p class="lead">Description or basic instructions might go here. Lorem ipsum blah blah blah latin blah blah blah.</p>
+        <h1>Open Source Mobile Device Management Server</h1>
+        <p class="lead">Choose a command to send to one or more enrolled devices.</p>
       </div>
 
 
@@ -70,27 +67,21 @@
         <div class="panel-heading">
           <h3 class="panel-title">Command Sent:</h3>
         </div>
-        <div class="panel-body" id="commandsent">
-          This is inside the panel body and would contain the results of the command sent.
-       </div>
+        <div class="panel-body" id="commandsent"></div>
       </div>
 
       <div class="panel panel-primary">
         <div class="panel-heading">
           <h3 class="panel-title">Result:</h3>
         </div>
-        <div class="panel-body" id="result">
-          This is inside the panel body and would contain the result from the mobile device.
-       </div>
+        <div class="panel-body" id="result"></div>
       </div>
 
       <div class="panel panel-danger">
         <div class="panel-heading">
-          <h3 class="panel-title">Errors Detected:</h3>
+          <h3 class="panel-title">Error log:</h3>
         </div>
-        <div class="panel-body" id="error">
-          This is inside the panel body and would contain an error and maybe it fixes the panel formatting?
-       </div>
+        <div class="panel-body" id="error"></div>
       </div>
 
 
@@ -107,8 +98,8 @@
     <script src="./dist/js/bootstrap.min.js"></script>
 
     <script>
-    //function to hardcode post data
     function cat(command, mylist){
+      // Ugly fix to hardcode data for AJAX request
       var str = "cmd=".concat(String(command), "&");
       for (var i=0;i<mylist.length;i++){ 
         str = str.concat("device=", String(mylist[i]), "&");
@@ -117,51 +108,52 @@
     }
 
     function update(dev_list, last_cmd, last_result, problems){
-          document.getElementById("commandsent").innerHTML = last_cmd;
-          document.getElementById("result").innerHTML = last_result;
-          document.getElementById("error").innerHTML = problems;
-          
-          // Re-populate devices list
-          x = document.getElementById("devices")
-          var is_same = true;
-	  if(dev_list.length == x.options.length){
-	    is_same = true;
-	    for(i=0;i<dev_list.length;i++){
-	      
-      	      if(dev_list[i][1] != x.options[i].value){
-	        is_same = false;
-              }
-	    }
-	    if(is_same){return;}
-	  }
+      document.getElementById("commandsent").innerHTML = last_cmd;
+      document.getElementById("result").innerHTML = last_result;
+      document.getElementById("error").innerHTML = problems;
 
-	  //This should only be executed if we have changes to device list
+      // Re-populate devices list
+      x = document.getElementById("devices")
+      var is_same = true;
+      if(dev_list.length == x.options.length){
 
-	  var isSelected=false;
-	  for(j=0;j<dev_list.length;j++){
-	    isSelected=false;
-	    for(i=0;i<x.options.length;i++){
-	      if(x.options[i].selected && x.options[i].value==dev_list[j][1]){
-                isSelected=true;
-                break;
-              }
-            }
-	    if(isSelected){
-              dev_list[j].push(false);
-              dev_list[j].push(true);
-            }
-            else{
-              dev_list[j].push(false);
-              dev_list[j].push(false);
-            }
-
+        is_same = true;
+        for(i=0;i<dev_list.length;i++){      
+      	  if(dev_list[i][1] != x.options[i].value){
+          is_same = false;
           }
+        }
+        if(is_same){return;}
+      }
 
-	  x.options.length = 0;
-          for(i=0;i<dev_list.length;i++){
-            x.options[x.options.length] = new Option(dev_list[i][0], dev_list[i][1], dev_list[i][2], dev_list[i][3]);
+      // This should only be executed if we have changes to device list
+      // Check current devices for selections and update new device list so selections are not lost
+      var isSelected = false;
+      for(j=0;j<dev_list.length;j++){
+        isSelected = false;
+        for(i=0;i<x.options.length;i++){
+          if(x.options[i].selected && x.options[i].value==dev_list[j][1]){
+            isSelected = true;
+            break;
           }
-	  
+        }
+        // Add variables to dev_list to reflect selected
+        // TODO: defaultselected is always false and is optional - remove it while keeping selected
+        if(isSelected){
+          dev_list[j].push(false);
+          dev_list[j].push(true);
+        }
+        else{
+          dev_list[j].push(false);
+          dev_list[j].push(false);
+        }
+      }
+
+      // Populate device list with new data
+      x.options.length = 0;
+      for(i=0;i<dev_list.length;i++){
+        x.options[x.options.length] = new Option(dev_list[i][0], dev_list[i][1], dev_list[i][2], dev_list[i][3]);
+      }
     }
 
     function update_cmds(){
@@ -178,36 +170,36 @@
     }
 
     function poll(){
+      // Polling function to allow for data-driven page
       $.post("/poll", function(data){
-        //split data and call update
         data = JSON.parse(data);
         update(data["dev_list"], data["last_cmd"], data["last_result"], data["problems"]);
       });
-
     }
 
     function checkDevice(){
+      // Returns true if site is accessed using an iDevice
       var agent   = navigator.userAgent;
-
       if (agent.match(/(iPhone|iPod|iPad)/)){
         return true;
       }
       return false;
-
     }
 
     $(document).ready(function(){
+      // Initial setup and start polling
       poll()
-      setInterval(poll,3000);
       update_cmds()
+      setInterval(poll,3000);
 
+      // Check for device-specific content and enable if applicable
       if(checkDevice()){
 	document.getElementById("showEnroll").style.display="block";
         document.getElementById("showCert").style.display="block";
       }
 
       $("#submit1").click(function(event){
-        //Input checking.
+        // Input checking.
         if ($("#commands").val()==0){
           alert("Please choose a command.");
         }
@@ -215,13 +207,14 @@
           alert("Please choose one or more devices.");
         }
         else{
+	  // Send AJAX request
+
+	  // Ugly fix for AJAX request not properly sending data
           var foo = cat($("#commands").val(), $("#devices").val());
-            //$.post("/bar", {cmd:$("#command1").val(), dev:$("#device1").val()}, function(x){
-            $.post("/queue_post", foo, function(data){
-            //split data and call update
+          //$.post("/queue", {cmd:$("#command1").val(), dev:$("#device1").val()}, function(data){
+          $.post("/queue", foo, function(data){
             data = JSON.parse(data);
             update(data["dev_list"], data["last_cmd"], data["last_result"], data["problems"]);
-            
           });
         }
       });

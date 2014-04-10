@@ -79,22 +79,20 @@ global mdm_commands
 
 urls = (
     '/', 'root',
-    '/queue', 'queue_cmd',  # depricated
-    '/queue_post', 'queue_cmd_post', # understand
+    '/queue', 'queue_cmd_post',
     '/checkin', 'do_mdm',
     '/server', 'do_mdm',
     '/ServerURL', 'do_mdm',
     '/CheckInURL', 'do_mdm',
-    '/enroll', 'enroll_profile',  # understand
-    '/ca', 'mdm_ca',		  # understand
-    '/favicon.ico', 'favicon',    # understand
+    '/enroll', 'enroll_profile',
+    '/ca', 'mdm_ca',
+    '/favicon.ico', 'favicon',
     '/manifest', 'app_manifest',
     '/app', 'app_ipa',
     '/problem', 'do_problem',
     '/problemjb', 'do_problem',
-    '/resetp', 'do_resetp',  # depricated
-    '/poll', 'poll',		  # understand
-    '/getcommands', 'get_commands', #understand
+    '/poll', 'poll',
+    '/getcommands', 'get_commands',
 )
 
 
@@ -315,41 +313,7 @@ class queue_cmd_post:
 	
 
 #class depricated - uses queue_cmd_post now
-class queue_cmd:
-    def GET(self):
-
-        global current_command, last_sent
-        global devList
-
-        devListPrime = []
-        i = web.input(device=[])
-        for dev in i.device:
-            creds = dev.split(' -- ')
-            for devP in devList:
-                if creds[0] == devP[1]:
-                    devListPrime.append(devP)
-
-        for dev_creds in devListPrime:
-            mylocal_PushMagic = dev_creds[1]
-            mylocal_DeviceToken = dev_creds[2]
-            print mylocal_PushMagic
-            print mylocal_DeviceToken
-            cmd = i.command
-            cmd_data = mdm_commands[cmd]
-            cmd_data['CommandUUID'] = str(uuid.uuid4())
-            current_command = cmd_data
-            last_sent = pprint.pformat(current_command)
-
-            wrapper = APNSNotificationWrapper('PushCert.pem', False)
-            message = APNSNotification()
-            message.token(mylocal_DeviceToken)
-            message.appendProperty(APNSProperty('mdm', mylocal_PushMagic))
-            wrapper.append(message)
-            wrapper.notify()
-
-        return home_page()
-
-
+#class queue_cmd:
 
 class do_mdm:        
     global last_result, sm_obj
@@ -434,65 +398,11 @@ class do_mdm:
                 pl[top] = '--redacted--'
 '''
 
-#depricated - uses update() now
-def home_page():
-    global mdm_commands, last_result, last_sent, problems, current_command
-    global devList
-
-    drop_list = ''
-    for key in sorted(mdm_commands.iterkeys()):
-        if current_command['Command']['RequestType'] == key:
-            selected = 'selected'
-        else:
-            selected = ''
-        drop_list += '<option value="%s" %s>%s</option>\n'%(key,selected,key)
-
-    dev_drop_list = ''
-    for dev_creds in devList:
-        dev = dev_creds[1] + ' -- ' + dev_creds[0]
-        dev_drop_list += '<option value="%s" >%s</option>\n'%(dev,dev)
-
-    enrollCommands = ""
-    agentStr = web.ctx.env['HTTP_USER_AGENT']
-    print agentStr
-    if ("(iPhone;" in agentStr) or ("(iPad;" in agentStr):
-        enrollCommands="""<td align="center">Tap <a href='/enroll'>here</a> to <br/>enroll in MDM</td>
-            <td align="right">Tap <a href='/ca'>here</a> to install the <br/> CA Cert (for Server/Identity)</td>"""
-
-    out = """
-<html><head><title>MDM Test Console</title></head><body>
-<table border='0' width='100%%'><tr><td>
-<form method="GET" action="/queue">
-  <tr>%s</tr>
-  <tr><td>
-  <select name="command">
-  <option value=''>Select command</option>
-%s
-  </select>
-  Select Device:<BR/>
-  <select name="device" multiple="multiple">
-%s
-  </select>
-  <input type=submit value="Send"/>
-</form></td></tr></table>
-<hr/>
-<b>Last command sent</b>
-<pre>%s</pre>
-<hr/>
-<b>Last result</b> (<a href="/">Refresh</a>)
-<pre>%s</pre>
-<hr/>
-<b>Problems Detected: </b> 
-<pre>%s</pre>
-</body></html>
-""" % (enrollCommands, drop_list, dev_drop_list, last_sent, last_result, "\n".join(problems))
-    """Comment to fix color highlighting"""
-    return out
 
 class get_commands:
     def POST(self):
         # Function to return static list of commands to the front page
-        # Should be called once by the document ready function
+        # Should be called once by document.ready
         global mdm_commands
 
         drop_list = []
@@ -503,7 +413,7 @@ class get_commands:
 def update():
     # Function to update displays on the frontend
     # Sends back dictionary of devices, last command, last result, problems
-    # Is used on page load along with get_commands, also used for polling
+    # Is called on page load and polling
 
     global last_result, last_sent, problems, devList
     
@@ -514,7 +424,7 @@ def update():
         dev_list_out.append([dev, dev])
 
     # Format output as a dict and then return as JSON
-    out = {}
+    out = dict()
     out['dev_list'] = dev_list_out
     out['last_cmd'] = last_sent
     out['last_result'] = last_result
@@ -546,7 +456,7 @@ def do_TokenUpdate(pl):
     newTuple = (web.ctx.ip, my_PushMagic, my_DeviceToken, my_UnlockToken)
     devList.append(newTuple)
 
-    # Check for duplicates in devList - is this needed? Are devices enrollments unique?
+    # Check for duplicates in devList
     for dev1 in devList:
       found = False
       for dev2 in devList:
@@ -581,7 +491,7 @@ def do_TokenUpdate(pl):
     fd.write(out)
     fd.close()
     
-    # Return empty dictionary - why?
+    # Why return empty dictionary?
     return dict()
 
 
@@ -613,12 +523,6 @@ problems = %s""" % problems
         fd.write(out)
         fd.close()
 
-# depricated? - now uses polling functionality
-class do_resetp:
-    def GET(self):
-        global problems
-        problems=[]
-
 class mdm_ca:
     def GET(self):
 
@@ -635,7 +539,6 @@ class favicon:
 
         if 'favicon.ico' in os.listdir('.'):
             web.header('Content-Type', 'image/x-icon;charset=utf-8')
-#            web.header('Content-Disposition', 'attachment;filename="favicon.ico"')
             return open('favicon.ico', "rb").read()
         else:
             raise web.notfound()
