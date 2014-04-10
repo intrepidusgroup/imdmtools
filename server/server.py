@@ -4,7 +4,7 @@ from APNSWrapper import *
 from creds import *
 from problems import *
 from datetime import datetime
-
+from subprocess import call
 # needed to handle verification of signed messages from devices
 from M2Crypto import SMIME, X509, BIO
 
@@ -32,8 +32,9 @@ from M2Crypto import SMIME, X509, BIO
 # * January 2012   - Added support for some iOS 5 functions. ShmooCon 8.
 # * February 2012  - Can now verify signed messages from devices
 #                  - Tweaks to CherryPy startup to avoid errors on console  
-# * January 214    - Support for multiple enrollments
+# * January 2014   - Support for multiple enrollments
 #                  - Supports reporting problems
+# * April 2014     - Support for new front end
 
 LOGFILE = 'xactn.log'
 
@@ -78,19 +79,22 @@ global mdm_commands
 
 urls = (
     '/', 'root',
-    '/queue', 'queue_cmd',
+    '/queue', 'queue_cmd',  # depricated
+    '/queue_post', 'queue_cmd_post', # understand
     '/checkin', 'do_mdm',
     '/server', 'do_mdm',
     '/ServerURL', 'do_mdm',
     '/CheckInURL', 'do_mdm',
-    '/enroll', 'enroll_profile',
-    '/ca', 'mdm_ca',
-    '/favicon.ico', 'favicon',
+    '/enroll', 'enroll_profile',  # understand
+    '/ca', 'mdm_ca',		  # understand
+    '/favicon.ico', 'favicon',    # understand
     '/manifest', 'app_manifest',
     '/app', 'app_ipa',
     '/problem', 'do_problem',
     '/problemjb', 'do_problem',
-    '/resetp', 'do_resetp',
+    '/resetp', 'do_resetp',  # depricated
+    '/poll', 'poll',		  # understand
+    '/getcommands', 'get_commands', #understand
 )
 
 
@@ -270,10 +274,50 @@ def setup_commands():
 
 class root:
     def GET(self):
-        return home_page()
+        return web.redirect("/static/index.html")
         
+class queue_cmd_post:
+    def POST(self):
+        global current_command, last_sent
+        global devList
+
+	
+        devListPrime = []
+        i = web.input(cmd="Select Command", device=[])
+	for dev in i.device:
+            creds = dev.split(' -- ')
+            for devP in devList:
+                if creds[0] == devP[1]:
+                    devListPrime.append(devP)
+
+        for dev_creds in devListPrime:
+            mylocal_PushMagic = dev_creds[1]
+            mylocal_DeviceToken = dev_creds[2]
+            print mylocal_PushMagic
+            print mylocal_DeviceToken
+            cmd = i.cmd
+            cmd_data = mdm_commands[cmd]
+            cmd_data['CommandUUID'] = str(uuid.uuid4())
+            current_command = cmd_data
+            last_sent = pprint.pformat(current_command)
+
+	    # Send command to Apple
+            wrapper = APNSNotificationWrapper('PushCert.pem', False)
+            message = APNSNotification()
+            message.token(mylocal_DeviceToken)
+            message.appendProperty(APNSProperty('mdm', mylocal_PushMagic))
+            wrapper.append(message)
+            wrapper.notify()
+            
+        
+	#Update page
+        return update()
+	
+
+#class depricated - uses queue_cmd_post now
 class queue_cmd:
     def GET(self):
+
         global current_command, last_sent
         global devList
 
@@ -288,7 +332,8 @@ class queue_cmd:
         for dev_creds in devListPrime:
             mylocal_PushMagic = dev_creds[1]
             mylocal_DeviceToken = dev_creds[2]
-
+            print mylocal_PushMagic
+            print mylocal_DeviceToken
             cmd = i.command
             cmd_data = mdm_commands[cmd]
             cmd_data['CommandUUID'] = str(uuid.uuid4())
@@ -321,12 +366,13 @@ class do_mdm:
             raw_sig = web.ctx.environ['HTTP_MDM_SIGNATURE']
             cooked_sig = '\n'.join(raw_sig[pos:pos+76] for pos in xrange(0, len(raw_sig), 76))
     
-            signature = """
+            signature = '''
 -----BEGIN PKCS7-----
 %s
 -----END PKCS7-----
-""" % cooked_sig
+''' % cooked_sig
 
+            '''Comment to fix color highlighting.'''
 
             #print i
             #print signature
@@ -388,7 +434,7 @@ class do_mdm:
                 pl[top] = '--redacted--'
 '''
 
-
+#depricated - uses update() now
 def home_page():
     global mdm_commands, last_result, last_sent, problems, current_command
     global devList
@@ -412,6 +458,7 @@ def home_page():
     if ("(iPhone;" in agentStr) or ("(iPad;" in agentStr):
         enrollCommands="""<td align="center">Tap <a href='/enroll'>here</a> to <br/>enroll in MDM</td>
             <td align="right">Tap <a href='/ca'>here</a> to install the <br/> CA Cert (for Server/Identity)</td>"""
+
     out = """
 <html><head><title>MDM Test Console</title></head><body>
 <table border='0' width='100%%'><tr><td>
@@ -422,8 +469,6 @@ def home_page():
   <option value=''>Select command</option>
 %s
   </select>
-  <input type=submit value="Send"/>
-  <hr/>
   Select Device:<BR/>
   <select name="device" multiple="multiple">
 %s
@@ -441,12 +486,51 @@ def home_page():
 <pre>%s</pre>
 </body></html>
 """ % (enrollCommands, drop_list, dev_drop_list, last_sent, last_result, "\n".join(problems))
-
+    """Comment to fix color highlighting"""
     return out
+
+class get_commands:
+    def POST(self):
+        # Function to return static list of commands to the front page
+        # Should be called once by the document ready function
+        global mdm_commands
+
+        drop_list = []
+        for key in sorted(mdm_commands.iterkeys()):
+            drop_list.append([key, key])    
+        return json.dumps(drop_list)
+
+def update():
+    # Function to update displays on the frontend
+    # Sends back dictionary of devices, last command, last result, problems
+    # Is used on page load along with get_commands, also used for polling
+
+    global last_result, last_sent, problems, devList
+    
+    # Create list of devices
+    dev_list_out = []
+    for dev_creds in devList:
+        dev = dev_creds[1] + ' -- ' + dev_creds[0]
+        dev_list_out.append([dev, dev])
+
+    # Format output as a dict and then return as JSON
+    out = {}
+    out['dev_list'] = dev_list_out
+    out['last_cmd'] = last_sent
+    out['last_result'] = last_result
+    out['problems'] = '<br>'.join(problems)
+
+    return json.dumps(out)	
+
+
+class poll:
+    def POST(self):
+        # Polling function to update page with new data
+        return update()
 
 
 def do_TokenUpdate(pl):
-    global my_PushMagic, my_DeviceToken, my_UnlockToken, mdm_commands
+    global mdm_commands, devList
 
     my_PushMagic = pl['PushMagic']
     my_DeviceToken = pl['Token'].data
@@ -458,21 +542,52 @@ def do_TokenUpdate(pl):
             UnlockToken = Data(my_UnlockToken)
         )
     )
-    newTuple = (web.ctx.ip, my_PushMagic, repr(my_DeviceToken), repr(my_UnlockToken))
+
+    newTuple = (web.ctx.ip, my_PushMagic, my_DeviceToken, my_UnlockToken)
     devList.append(newTuple)
-    # devList = set(devList)
-    out = "devList = %s" % devList
+
+    # Check for duplicates in devList - is this needed? Are devices enrollments unique?
+    for dev1 in devList:
+      found = False
+      for dev2 in devList:
+        if dev1[1] == dev2[1]:
+          if not found:
+             found = True
+          else:
+             devList.remove(dev2)
+    
+    devListP = devList
+    devList = list(set(devListP))
+    out = "devList = ["
+    for dev in devList:
+        ipAddr = dev[0]
+        pushMagic = dev[1]
+        deviceToken = dev[2]
+        unlockToken = dev[3]
+       
+        out += """
+            ( '%s'
+            , '%s'
+            , %s
+            , %s
+            ),
+        """ % (ipAddr, pushMagic, repr(deviceToken), repr(unlockToken))
+    out += "]"
+    """Comment to fix syntax highlighting"""
+    # tokenStr = (repr(my_DeviceToken)).replace("'", "").replace("\\\\", "\\")
+    #out = "devList = " + r"%s" % devList
 
     fd = open('creds.py', 'w')
     fd.write(out)
     fd.close()
     
-
+    # Return empty dictionary - why?
     return dict()
 
 
 class enroll_profile:
     def GET(self):
+	# Enroll an iPad/iPhone/iPod when requested
         if 'Enroll.mobileconfig' in os.listdir('.'):
             web.header('Content-Type', 'application/x-apple-aspen-config;charset=utf-8')
             web.header('Content-Disposition', 'attachment;filename="Enroll.mobileconfig"')
@@ -498,6 +613,7 @@ problems = %s""" % problems
         fd.write(out)
         fd.close()
 
+# depricated? - now uses polling functionality
 class do_resetp:
     def GET(self):
         global problems

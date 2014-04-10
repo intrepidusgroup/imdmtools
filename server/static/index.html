@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="Rory Thrasher">
+    <link rel="shortcut icon" href="../../assets/ico/favicon.ico">
+
+    <title>Open Source MDM Server</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="./dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="./starter-template.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy this line! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+
+
+  <div class="container">    
+
+      <div id="showEnroll" style="display:none" class="row col-md-6" align="center">Tap <a href='/enroll'>here</a> to <br/>enroll in MDM</div>
+      <div id="showCert" style="display:none" class="row col-md-6" align="center">Tap <a href='/ca'>here</a> to install the <br/> CA Cert (for Server/Identity)</div>
+
+      <div class="starter-template">
+        <h1>MDM Server</h1>
+        <p class="lead">Description or basic instructions might go here. Lorem ipsum blah blah blah latin blah blah blah.</p>
+      </div>
+
+
+
+
+
+      <div class="row">
+        <div class="col-md-4 text-center">
+          <br>
+          <select class="form-control" id="commands" name="command">
+            <span class="col-md-4"></span>
+            <option value=''>Select command</option>
+            </select>
+        </div><!-- /.col-md-4 -->
+
+        <div class="col-md-4 text-center">
+          <br>
+          <select class="form-control" id="devices" name="device" multiple="multiple">
+          </select>
+
+        </div><!-- /.col-md-4 -->
+        <div class="col-md-4 text-center">
+          <br>
+          <input class="btn btn-large btn-primary" id="submit1" type="submit"/>
+        </div><!-- /.col-md-4 -->
+      </div><!-- /.row -->
+
+      <br><br><br>
+
+      <div class="panel panel-primary">
+        <div class="panel-heading">
+          <h3 class="panel-title">Command Sent:</h3>
+        </div>
+        <div class="panel-body" id="commandsent">
+          This is inside the panel body and would contain the results of the command sent.
+       </div>
+      </div>
+
+      <div class="panel panel-primary">
+        <div class="panel-heading">
+          <h3 class="panel-title">Result:</h3>
+        </div>
+        <div class="panel-body" id="result">
+          This is inside the panel body and would contain the result from the mobile device.
+       </div>
+      </div>
+
+      <div class="panel panel-danger">
+        <div class="panel-heading">
+          <h3 class="panel-title">Errors Detected:</h3>
+        </div>
+        <div class="panel-body" id="error">
+          This is inside the panel body and would contain an error and maybe it fixes the panel formatting?
+       </div>
+      </div>
+
+
+
+
+    </div><!-- /.container -->
+
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>-->
+    <script src="jquery-1.11.0.min.js"></script>
+    <script src="./dist/js/bootstrap.min.js"></script>
+
+    <script>
+    //function to hardcode post data
+    function cat(command, mylist){
+      var str = "cmd=".concat(String(command), "&");
+      for (var i=0;i<mylist.length;i++){ 
+        str = str.concat("device=", String(mylist[i]), "&");
+      }
+      return String(str).slice(0, -1);
+    }
+
+    function update(dev_list, last_cmd, last_result, problems){
+          document.getElementById("commandsent").innerHTML = last_cmd;
+          document.getElementById("result").innerHTML = last_result;
+          document.getElementById("error").innerHTML = problems;
+          
+          // Re-populate devices list
+          x = document.getElementById("devices")
+          var is_same = true;
+	  if(dev_list.length == x.options.length){
+	    is_same = true;
+	    for(i=0;i<dev_list.length;i++){
+	      
+      	      if(dev_list[i][1] != x.options[i].value){
+	        is_same = false;
+              }
+	    }
+	    if(is_same){return;}
+	  }
+
+	  //This should only be executed if we have changes to device list
+
+	  var isSelected=false;
+	  for(j=0;j<dev_list.length;j++){
+	    isSelected=false;
+	    for(i=0;i<x.options.length;i++){
+	      if(x.options[i].selected && x.options[i].value==dev_list[j][1]){
+                isSelected=true;
+                break;
+              }
+            }
+	    if(isSelected){
+              dev_list[j].push(false);
+              dev_list[j].push(true);
+            }
+            else{
+              dev_list[j].push(false);
+              dev_list[j].push(false);
+            }
+
+          }
+
+	  x.options.length = 0;
+          for(i=0;i<dev_list.length;i++){
+            x.options[x.options.length] = new Option(dev_list[i][0], dev_list[i][1], dev_list[i][2], dev_list[i][3]);
+          }
+	  
+    }
+
+    function update_cmds(){
+      // Populate command list
+        $.post("/getcommands", function(cmd_list){
+          cmds = JSON.parse(cmd_list);
+          x = document.getElementById("commands");
+          x.options.length = 0;
+          x.options[x.options.length] = new Option("Select Command", "", true, false);
+          for(i=0;i<cmds.length;i++){
+            x.options[x.options.length] = new Option(cmds[i][0], cmds[i][1]);
+          }
+        });
+    }
+
+    function poll(){
+      $.post("/poll", function(data){
+        //split data and call update
+        data = JSON.parse(data);
+        update(data["dev_list"], data["last_cmd"], data["last_result"], data["problems"]);
+      });
+
+    }
+
+    function checkDevice(){
+      var agent   = navigator.userAgent;
+
+      if (agent.match(/(iPhone|iPod|iPad)/)){
+        return true;
+      }
+      return false;
+
+    }
+
+    $(document).ready(function(){
+      poll()
+      setInterval(poll,3000);
+      update_cmds()
+
+      if(checkDevice()){
+	document.getElementById("showEnroll").style.display="block";
+        document.getElementById("showCert").style.display="block";
+      }
+
+      $("#submit1").click(function(event){
+        //Input checking.
+        if ($("#commands").val()==0){
+          alert("Please choose a command.");
+        }
+        else if ($("#devices").val()==null){
+          alert("Please choose one or more devices.");
+        }
+        else{
+          var foo = cat($("#commands").val(), $("#devices").val());
+            //$.post("/bar", {cmd:$("#command1").val(), dev:$("#device1").val()}, function(x){
+            $.post("/queue_post", foo, function(data){
+            //split data and call update
+            data = JSON.parse(data);
+            update(data["dev_list"], data["last_cmd"], data["last_result"], data["problems"]);
+            
+          });
+        }
+      });
+    });
+    </script>
+    
+  </body>
+</html>
