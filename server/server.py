@@ -311,17 +311,13 @@ class queue_cmd_post:
 	#Update page
         return update()
 	
-
-#class depricated - uses queue_cmd_post now
-#class queue_cmd:
-
 class do_mdm:        
     global last_result, sm_obj
     def PUT(self):
         global current_command, last_result
         HIGH='[1;31m'
         LOW='[0;32m'
-        NORMAL='[0;30m'
+        NORMAL='[0;39m'
 
         i = web.data()
         pl = readPlistFromString(i)
