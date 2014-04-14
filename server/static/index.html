@@ -98,15 +98,6 @@
     <script src="./dist/js/bootstrap.min.js"></script>
 
     <script>
-    function cat(command, mylist){
-      // Ugly fix to hardcode data for AJAX request
-      var str = "cmd=".concat(String(command), "&");
-      for (var i=0;i<mylist.length;i++){ 
-        str = str.concat("device=", String(mylist[i]), "&");
-      }
-      return String(str).slice(0, -1);
-    }
-
     function update(dev_list, last_cmd, last_result, problems){
       document.getElementById("commandsent").innerHTML = last_cmd;
       document.getElementById("result").innerHTML = last_result;
@@ -114,9 +105,9 @@
 
       // Re-populate devices list
       x = document.getElementById("devices")
-      var is_same = true;
-      if(dev_list.length == x.options.length){
 
+      if(dev_list.length == x.options.length){
+        var is_same = true;
         is_same = true;
         for(i=0;i<dev_list.length;i++){      
       	  if(dev_list[i][1] != x.options[i].value){
@@ -158,15 +149,15 @@
 
     function update_cmds(){
       // Populate command list
-        $.post("/getcommands", function(cmd_list){
-          cmds = JSON.parse(cmd_list);
-          x = document.getElementById("commands");
-          x.options.length = 0;
-          x.options[x.options.length] = new Option("Select Command", "", true, false);
-          for(i=0;i<cmds.length;i++){
-            x.options[x.options.length] = new Option(cmds[i][0], cmds[i][1]);
-          }
-        });
+      $.post("/getcommands", function(cmd_list){
+        cmds = JSON.parse(cmd_list);
+        x = document.getElementById("commands");
+        x.options.length = 0
+        x.options[x.options.length] = new Option("Select Command", "", true, false);
+        for(i=0;i<cmds.length;i++){
+          x.options[x.options.length] = new Option(cmds[i][0], cmds[i][1]);
+        }
+      });
     }
 
     function poll(){
@@ -209,10 +200,23 @@
         else{
 	  // Send AJAX request
 
-	  // Ugly fix for AJAX request not properly sending data
-          var foo = cat($("#commands").val(), $("#devices").val());
-          //$.post("/queue", {cmd:$("#command1").val(), dev:$("#device1").val()}, function(data){
-          $.post("/queue", foo, function(data){
+	  var dev_out = [];
+	  devs = document.getElementById("devices").options
+	  for(i=0;i<devs.length;i++){
+	    temp = [];
+	    temp.push(devs[i].text);
+	    temp.push(devs[i].value);
+	    dev_out.push(temp);
+	  }
+
+	  // Variable to pass all necessary data to server
+	  var parameters = {
+	    "cmd":$("#commands").val(),
+	    "dev[]":dev_out
+	  };
+
+	  // Use stringify to fix odd error with passing just parameters
+          $.post("/queue", JSON.stringify(parameters), function(data){
             data = JSON.parse(data);
             update(data["dev_list"], data["last_cmd"], data["last_result"], data["problems"]);
           });

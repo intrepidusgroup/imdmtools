@@ -281,24 +281,29 @@ class queue_cmd_post:
 
 	
         devListPrime = []
-        i = web.input(cmd="Select Command", device=[])
-	for dev in i.device:
-            creds = dev.split(' -- ')
+	i = json.loads(web.data())
+	cmd = i.pop("cmd", [])
+	dev = i.pop("dev[]", [])
+
+        for device in dev:
             for devP in devList:
-                if creds[0] == devP[1]:
+                if devP[1] == devP[1]:
                     devListPrime.append(devP)
+                    break
+	
 
         for dev_creds in devListPrime:
             mylocal_PushMagic = dev_creds[1]
             mylocal_DeviceToken = dev_creds[2]
             print mylocal_PushMagic
             print mylocal_DeviceToken
-            cmd = i.cmd
+            #cmd = i.cmd
             cmd_data = mdm_commands[cmd]
             cmd_data['CommandUUID'] = str(uuid.uuid4())
             current_command = cmd_data
             last_sent = pprint.pformat(current_command)
 
+	    """
 	    # Send command to Apple
             wrapper = APNSNotificationWrapper('PushCert.pem', False)
             message = APNSNotification()
@@ -306,7 +311,7 @@ class queue_cmd_post:
             message.appendProperty(APNSProperty('mdm', mylocal_PushMagic))
             wrapper.append(message)
             wrapper.notify()
-            
+            """
         
 	#Update page
         return update()
@@ -416,9 +421,8 @@ def update():
     # Create list of devices
     dev_list_out = []
     for dev_creds in devList:
-        dev = dev_creds[1] + ' -- ' + dev_creds[0]
-        dev_list_out.append([dev, dev])
-
+	dev_list_out.append([dev_creds[0], dev_creds[1]])
+    
     # Format output as a dict and then return as JSON
     out = dict()
     out['dev_list'] = dev_list_out
@@ -558,7 +562,8 @@ class app_ipa:
             web.header('Content-Disposition', 'attachment;filename="MyApp.ipa"')
             return open('MyApp.ipa', "rb").read()
         else:
-            raise web.notfound()
+            return web.ok
+	    #raise web.notfound()
 
 
 
