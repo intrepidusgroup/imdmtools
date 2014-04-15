@@ -77,8 +77,8 @@ except ImportError:
     SSL = None 
 
 
-CherryPyWSGIServer.ssl_certificate = "./Server.crt"
-CherryPyWSGIServer.ssl_private_key = "./Server.key"
+CherryPyWSGIServer.ssl_certificate = "Server.crt"
+CherryPyWSGIServer.ssl_private_key = "Server.key"
 
 ###########################################################################
 
@@ -303,8 +303,6 @@ class queue_cmd_post:
             for devP in devList:
                 if devP[1] == devP[1]:
                     devListPrime.append(devP)
-                    break
-	
 
         for dev_creds in devListPrime:
             mylocal_PushMagic = dev_creds[1]
@@ -317,7 +315,7 @@ class queue_cmd_post:
             current_command = cmd_data
             last_sent = pprint.pformat(current_command)
 
-	    """
+	    
 	    # Send command to Apple
             wrapper = APNSNotificationWrapper('PushCert.pem', False)
             message = APNSNotification()
@@ -325,7 +323,7 @@ class queue_cmd_post:
             message.appendProperty(APNSProperty('mdm', mylocal_PushMagic))
             wrapper.append(message)
             wrapper.notify()
-            """
+            
         
 	#Update page
         return update()
