@@ -35,12 +35,13 @@ from M2Crypto import SMIME, X509, BIO
 # * January 2014   - Support for multiple enrollments
 #                  - Supports reporting problems
 # * April 2014     - Support for new front end
+#                  - Tweaks and bug fixes
 
 LOGFILE = 'xactn.log'
 
 # Dummy socket to get the hostname
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-s.connect(('google.com', 0))
+s.connect(('8.8.8.8', 0))
 
 # NOTE: Will need to overwrite this if behind a firewall
 MY_ADDR = s.getsockname()[0] + ":8080"
@@ -66,9 +67,18 @@ sm_obj.set_x509_store(st)
 my_test_provisioning_uuid = 'REPLACE-ME-WITH-REAL-UUIDSTRING'
 
 from web.wsgiserver import CherryPyWSGIServer
-from web.wsgiserver.ssl_builtin import BuiltinSSLAdapter
 
-CherryPyWSGIServer.ssl_adapter = BuiltinSSLAdapter('Server.crt', 'Server.key', None)
+# Python 2.7 requires the PyOpenSSL library
+# Python 3.x should use be able to use the default python SSL
+try:
+    from OpenSSL import SSL 
+    from OpenSSL import crypto 
+except ImportError: 
+    SSL = None 
+
+
+CherryPyWSGIServer.ssl_certificate = "./Server.crt"
+CherryPyWSGIServer.ssl_private_key = "./Server.key"
 
 ###########################################################################
 
@@ -268,6 +278,10 @@ def setup_commands():
 
 
     return ret_list
+
+class NoSSLError(Exception):
+    """Exception raised when a client speaks HTTP to an HTTPS socket."""
+    pass
 
 
 class root:
@@ -536,7 +550,7 @@ class mdm_ca:
 
 class favicon:
     def GET(self):
-
+	# TODO: Change path to './static/'
         if 'favicon.ico' in os.listdir('.'):
             web.header('Content-Type', 'image/x-icon;charset=utf-8')
             return open('favicon.ico', "rb").read()
@@ -580,8 +594,9 @@ if __name__ == "__main__":
     print "Starting Server" 
     app = web.application(urls, globals())
     app.internalerror = web.debugerror
-    app.run()
+    #app.run()
+
     try:
         app.run()
     except:
-        os._exit(0)
+	os._exit(0)

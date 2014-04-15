@@ -11,10 +11,11 @@ whitepaper elsewhere in this repository.
  -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 software:
-* python
+* python 2.7
 * python libraries:
   * web.py: http://webpy.org/ 
   * M2Crypto: http://chandlerproject.org/bin/view/Projects/MeTooCrypto
+  * PyOpenSSL: https://pypi.python.org/pypi/pyOpenSSL
 * OpenSSL (to create certs)
 * Iphone Configuration Utility (free from Apple) 
 
