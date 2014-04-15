@@ -86,9 +86,10 @@ You must have the following installed on the server:
     * Recommend downloading and compiling yourself
     * Some Debian-based distros disable features needed by M2Crypto
     * Source available at [http://www.openssl.org/source/](http://www.openssl.org/source/)
-  * Python, with the following libraries
+  * Python 2.7, with the following libraries
      * [web.py](http://webpy.org/)
      * [M2Crypto](http://chandlerproject.org/bin/view/Projects/MeTooCrypto)
+     * [PyOpenSSL](https://pypi.python.org/pypi/pyOpenSSL)
 
 Network Settings
   * Outbound access to gateway.push.apple.com:2195
