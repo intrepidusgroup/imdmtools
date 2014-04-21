@@ -141,12 +141,10 @@ def setup_commands():
                 'Model', 'ModelName', 'ModemFirmwareVersion', 'OSVersion', 
                 'PhoneNumber', 'Product', 'ProductName', 'SIMCarrierNetwork', 
                 'SIMMCC', 'SIMMNC', 'SerialNumber', 'UDID', 'WiFiMAC', 'UDID',
-                'UnlockToken',
-
-    		'MEID', 'CellularTechnology', 'BatteryLevel', 
-		    'SubscriberCarrierNetwork', 'VoiceRoamingEnabled', 
-		    'SubscriberMCC', 'SubscriberMNC', 'DataRoaming', 'VoiceRomaing',
-            'JailbreakDetected'
+                'UnlockToken', 'MEID', 'CellularTechnology', 'BatteryLevel', 
+		        'SubscriberCarrierNetwork', 'VoiceRoamingEnabled', 
+		        'SubscriberMCC', 'SubscriberMNC', 'DataRoaming', 'VoiceRomaing',
+                'JailbreakDetected'
             ]
         )
     )
@@ -202,7 +200,7 @@ def setup_commands():
         ret_list['RemoveProvisioningProfile'] = dict(
             Command = dict(
                 RequestType = 'RemoveProvisioningProfile',
-        # need an ASN.1 parser to snarf the UUID out of the signed profile
+                # need an ASN.1 parser to snarf the UUID out of the signed profile
                 UUID = my_test_provisioning_uuid
             )
         )
@@ -279,32 +277,29 @@ def setup_commands():
 
     return ret_list
 
-class NoSSLError(Exception):
-    """Exception raised when a client speaks HTTP to an HTTPS socket."""
-    pass
-
-
 class root:
     def GET(self):
         return web.redirect("/static/index.html")
-        
+
 class queue_cmd_post:
     def POST(self):
-        global current_command, last_sent
-        global devList
-
-	
+        global current_command, last_sent, devList
+        
         devListPrime = []
-	i = json.loads(web.data())
-	cmd = i.pop("cmd", [])
-	dev = i.pop("dev[]", [])
+        i = json.loads(web.data())
+        cmd = i.pop("cmd", [])
+        dev = i.pop("dev[]", [])
 
         for device in dev:
             for devP in devList:
                 if devP[1] == devP[1]:
                     devListPrime.append(devP)
 
+        count = 0
+        print "*** SIZE IS: ***", len(devListPrime) #debug
         for dev_creds in devListPrime:
+            count+=1
+            print "*** QUEUE->DEV LOOP ***", count #debug
             mylocal_PushMagic = dev_creds[1]
             mylocal_DeviceToken = dev_creds[2]
             print mylocal_PushMagic
@@ -316,7 +311,7 @@ class queue_cmd_post:
             last_sent = pprint.pformat(current_command)
 
 	    
-	    # Send command to Apple
+	        # Send command to Apple
             wrapper = APNSNotificationWrapper('PushCert.pem', False)
             message = APNSNotification()
             message.token(mylocal_DeviceToken)
@@ -325,13 +320,15 @@ class queue_cmd_post:
             wrapper.notify()
             
         
-	#Update page
+	    # Update page
         return update()
 	
 class do_mdm:        
-    global last_result, sm_obj
+    #v this line necessary?
+    #global last_result, sm_obj
     def PUT(self):
-        global current_command, last_result
+        print "**** do-mdm -> PUT ****"
+        global current_command, last_result, sm_obj
         HIGH='[1;31m'
         LOW='[0;32m'
         NORMAL='[0;39m'
@@ -342,14 +339,9 @@ class do_mdm:
         if 'HTTP_MDM_SIGNATURE' in web.ctx.environ:
             raw_sig = web.ctx.environ['HTTP_MDM_SIGNATURE']
             cooked_sig = '\n'.join(raw_sig[pos:pos+76] for pos in xrange(0, len(raw_sig), 76))
-    
-            signature = '''
------BEGIN PKCS7-----
-%s
------END PKCS7-----
-''' % cooked_sig
 
-            '''Comment to fix color highlighting.'''
+            signature = '\n-----BEGIN PKCS7-----\n%s\n-----END PKCS7-----\n' % cooked_sig
+
 
             #print i
             #print signature
@@ -368,9 +360,14 @@ class do_mdm:
 
         if pl.get('Status') == 'Idle':
             print HIGH + "Idle Status" + NORMAL
+            
+            # Hack to fix iOS7 infinite /server calls
+            if(current_command=={}):
+                return ''
+
             rd = current_command
             print "%sSent: %s%s" % (HIGH, rd['Command']['RequestType'], NORMAL)
-#            print HIGH, rd, NORMAL
+            current_command={}
 
         elif pl.get('MessageType') == 'TokenUpdate':
             print HIGH+"Token Update"+NORMAL
@@ -394,11 +391,15 @@ class do_mdm:
         log_data(rd)
 
         out = writePlistToString(rd)
-#        print LOW, out, NORMAL
-
+        #print LOW, out, NORMAL
+        print "**** END OF do_mdm ****"
         q = pl.get('QueryResponses')
         last_result = pprint.pformat(pl)
         return out
+
+# Code for safe printing
+# Hides important unique identifiers
+# See original MDM code for proper placement
 '''
         if q:
             redact_list = ('UDID', 'BluetoothMAC', 'SerialNumber', 'WiFiMAC',
@@ -442,7 +443,7 @@ def update():
     out['last_result'] = last_result
     out['problems'] = '<br>'.join(problems)
 
-    return json.dumps(out)	
+    return json.dumps(out)
 
 
 class poll:
@@ -452,6 +453,7 @@ class poll:
 
 
 def do_TokenUpdate(pl):
+    print "***** do_TokenUpdate *****"
     global mdm_commands, devList
 
     my_PushMagic = pl['PushMagic']
@@ -477,7 +479,7 @@ def do_TokenUpdate(pl):
              found = True
           else:
              devList.remove(dev2)
-    
+
     devListP = devList
     devList = list(set(devListP))
     out = "devList = ["
@@ -486,18 +488,11 @@ def do_TokenUpdate(pl):
         pushMagic = dev[1]
         deviceToken = dev[2]
         unlockToken = dev[3]
-       
-        out += """
-            ( '%s'
-            , '%s'
-            , %s
-            , %s
-            ),
-        """ % (ipAddr, pushMagic, repr(deviceToken), repr(unlockToken))
-    out += "]"
-    """Comment to fix syntax highlighting"""
-    # tokenStr = (repr(my_DeviceToken)).replace("'", "").replace("\\\\", "\\")
-    #out = "devList = " + r"%s" % devList
+
+        sp12 = 12*' '
+        out += "\n%s( '%s'\n%s, '%s'\n%s, %s\n%s, %s\n%s),\n        " % (sp12, ipAddr, sp12, pushMagic, sp12, repr(deviceToken), sp12, repr(unlockToken), sp12)
+
+    out +=']'    
 
     fd = open('creds.py', 'w')
     fd.write(out)
@@ -529,8 +524,7 @@ class do_problem:
         problem_detect += web.ctx.ip
 
         problems.insert(0, problem_detect)
-        out = """
-problems = %s""" % problems
+        out = "\nproblems = %s" % problems
         fd = open('problems.py', 'w')
         fd.write(out)
         fd.close()
@@ -548,7 +542,7 @@ class mdm_ca:
 
 class favicon:
     def GET(self):
-	# TODO: Change path to './static/'
+        # TODO: Change path to './static/'
         if 'favicon.ico' in os.listdir('.'):
             web.header('Content-Type', 'image/x-icon;charset=utf-8')
             return open('favicon.ico', "rb").read()
@@ -575,12 +569,12 @@ class app_ipa:
             return open('MyApp.ipa', "rb").read()
         else:
             return web.ok
-	    #raise web.notfound()
-
 
 
 mdm_commands = setup_commands()
-current_command = mdm_commands['DeviceLock']
+#current_command = mdm_commands['DeviceLock']
+# ^ Is this line necessary?
+
 
 def log_data(out):
     fd = open(LOGFILE, "a")
@@ -592,9 +586,8 @@ if __name__ == "__main__":
     print "Starting Server" 
     app = web.application(urls, globals())
     app.internalerror = web.debugerror
-    #app.run()
 
     try:
         app.run()
     except:
-	os._exit(0)
+        os._exit(0)

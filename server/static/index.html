@@ -108,10 +108,9 @@
 
       if(dev_list.length == x.options.length){
         var is_same = true;
-        is_same = true;
-        for(i=0;i<dev_list.length;i++){      
+        for(i=0;i<dev_list.length;i++){
       	  if(dev_list[i][1] != x.options[i].value){
-          is_same = false;
+            is_same = false;
           }
         }
         if(is_same){return;}
@@ -120,6 +119,7 @@
       // This should only be executed if we have changes to device list
       // Check current devices for selections and update new device list so selections are not lost
       var isSelected = false;
+      console.log("Reached need to update devices area");
       for(j=0;j<dev_list.length;j++){
         isSelected = false;
         for(i=0;i<x.options.length;i++){
