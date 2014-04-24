@@ -37,6 +37,9 @@ from M2Crypto import SMIME, X509, BIO
 # * April 2014     - Support for new front end
 #                  - Tweaks and bug fixes
 
+
+
+# Global variable setup
 LOGFILE = 'xactn.log'
 
 # Dummy socket to get the hostname
@@ -46,9 +49,7 @@ s.connect(('8.8.8.8', 0))
 # NOTE: Will need to overwrite this if behind a firewall
 MY_ADDR = s.getsockname()[0] + ":8080"
 
-# 
-# set up some smime objects to verify signed messages coming from devices
-#
+# Set up some smime objects to verify signed messages coming from devices
 sm_obj = SMIME.SMIME()
 x509 = X509.load_cert('identity.crt')
 sk = X509.X509_Stack()
@@ -108,6 +109,7 @@ urls = (
 
 
 def setup_commands():
+    # Function to generate dictionary of valid commands
     global my_test_provisioning_uuid
 
     ret_list = dict()
@@ -209,7 +211,7 @@ def setup_commands():
         print "Can't find MyApp.mobileprovision in current directory."
 
 #
-# new for iOS 5:
+# iOS 5:
 #
     ret_list['InstallApplication'] = dict(
     Command = dict(
@@ -295,11 +297,7 @@ class queue_cmd_post:
                 if devP[1] == devP[1]:
                     devListPrime.append(devP)
 
-        count = 0
-        print "*** SIZE IS: ***", len(devListPrime) #debug
         for dev_creds in devListPrime:
-            count+=1
-            print "*** QUEUE->DEV LOOP ***", count #debug
             mylocal_PushMagic = dev_creds[1]
             mylocal_DeviceToken = dev_creds[2]
             print mylocal_PushMagic
@@ -310,6 +308,7 @@ class queue_cmd_post:
             current_command = cmd_data
             last_sent = pprint.pformat(current_command)
 
+            # TODO: Push command to command_list
 	    
 	        # Send command to Apple
             wrapper = APNSNotificationWrapper('PushCert.pem', False)
@@ -324,10 +323,9 @@ class queue_cmd_post:
         return update()
 	
 class do_mdm:        
-    #v this line necessary?
+    #this line necessary? Does global make it a var global or go up 1 level of scope?
     #global last_result, sm_obj
     def PUT(self):
-        print "**** do-mdm -> PUT ****"
         global current_command, last_result, sm_obj
         HIGH='[1;31m'
         LOW='[0;32m'
@@ -335,6 +333,8 @@ class do_mdm:
 
         i = web.data()
         pl = readPlistFromString(i)
+
+        # TODO: Will be replacing current_command with command_list[pl.UUID]
 
         if 'HTTP_MDM_SIGNATURE' in web.ctx.environ:
             raw_sig = web.ctx.environ['HTTP_MDM_SIGNATURE']
@@ -361,9 +361,12 @@ class do_mdm:
         if pl.get('Status') == 'Idle':
             print HIGH + "Idle Status" + NORMAL
             
+            # TODO: Change current_command to command_list[UUID]?
+            # What should be the desired functionality for 'Idle'?
+    
             # Hack to fix iOS7 infinite /server calls
             if(current_command=={}):
-                return ''
+                return writePlistToString(dict())
 
             rd = current_command
             print "%sSent: %s%s" % (HIGH, rd['Command']['RequestType'], NORMAL)
@@ -392,12 +395,14 @@ class do_mdm:
 
         out = writePlistToString(rd)
         #print LOW, out, NORMAL
-        print "**** END OF do_mdm ****"
         q = pl.get('QueryResponses')
+
+        # TODO: Add this result to command_list[UUID]['result'] instead
         last_result = pprint.pformat(pl)
+
         return out
 
-# Code for safe printing
+# Code for safer information printing
 # Hides important unique identifiers
 # See original MDM code for proper placement
 '''
@@ -429,12 +434,15 @@ def update():
     # Sends back dictionary of devices, last command, last result, problems
     # Is called on page load and polling
 
+    # TODO: Change last_result/sent to access command_list
+    # Take in the command UUID from server?
+
     global last_result, last_sent, problems, devList
     
     # Create list of devices
     dev_list_out = []
     for dev_creds in devList:
-	dev_list_out.append([dev_creds[0], dev_creds[1]])
+        dev_list_out.append([dev_creds[0], dev_creds[1]])
     
     # Format output as a dict and then return as JSON
     out = dict()
@@ -449,11 +457,11 @@ def update():
 class poll:
     def POST(self):
         # Polling function to update page with new data
+        # TODO: Change to take in command UUID and pass to update()
         return update()
 
 
 def do_TokenUpdate(pl):
-    print "***** do_TokenUpdate *****"
     global mdm_commands, devList
 
     my_PushMagic = pl['PushMagic']
@@ -542,10 +550,12 @@ class mdm_ca:
 
 class favicon:
     def GET(self):
-        # TODO: Change path to './static/'
         if 'favicon.ico' in os.listdir('.'):
             web.header('Content-Type', 'image/x-icon;charset=utf-8')
             return open('favicon.ico', "rb").read()
+        elif 'favicon.ico' in os.listdir('./static/'):
+            web.header('Content-Type', 'image/x-icon;charset=utf-8')
+            return open('/static/favicon.ico', "rb").read()
         else:
             raise web.notfound()
 
@@ -571,16 +581,13 @@ class app_ipa:
             return web.ok
 
 
-mdm_commands = setup_commands()
-#current_command = mdm_commands['DeviceLock']
-# ^ Is this line necessary?
-
-
 def log_data(out):
     fd = open(LOGFILE, "a")
     fd.write(datetime.now().ctime())
     fd.write(" %s\n" % repr(out))
     fd.close()
+
+mdm_commands = setup_commands()
 
 if __name__ == "__main__":
     print "Starting Server" 
@@ -590,4 +597,4 @@ if __name__ == "__main__":
     try:
         app.run()
     except:
-        os._exit(0)
+        os.exit(0)
