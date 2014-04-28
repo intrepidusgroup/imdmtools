@@ -449,6 +449,8 @@ def do_TokenUpdate(pl):
     my_DeviceToken = pl['Token'].data
     my_UnlockToken = pl['UnlockToken'].data
 
+
+    # Does this need to be changed for ClearPasscode to work with multiple devices?
     mdm_commands['ClearPasscode'] = dict(
         Command = dict(
             RequestType = 'ClearPasscode',
