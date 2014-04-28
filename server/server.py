@@ -292,7 +292,7 @@ class queue_cmd_post:
 
         for device in dev:
             for devP in devList:
-                if devP[1] == devP[1]:
+                if device[1] == devP[1]:
                     devListPrime.append(devP)
 
         count = 0
