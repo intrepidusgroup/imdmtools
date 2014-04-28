@@ -104,6 +104,8 @@ urls = (
     '/problemjb', 'do_problem',
     '/poll', 'poll',
     '/getcommands', 'get_commands',
+    '/devices', 'dev_tab',
+    '/deviceupdate', 'dev_update',
 )
 
 
@@ -154,6 +156,7 @@ def setup_commands():
     ret_list['ClearPasscode'] = dict(
         Command = dict(
             RequestType = 'ClearPasscode',
+            # When ClearPasscode is used, the device specific unlock token needs to be added
             # UnlockToken = Data(my_UnlockToken)
         )
     )
@@ -283,6 +286,33 @@ class root:
     def GET(self):
         return web.redirect("/static/index.html")
 
+def queue(cmd, dev_creds):
+    global current_command, last_sent, devList
+
+    mylocal_PushMagic = dev_creds[1]
+    mylocal_DeviceToken = dev_creds[2]
+
+    #print mylocal_PushMagic
+    #print mylocal_DeviceToken
+
+    cmd_data = mdm_commands[cmd]
+    cmd_data['CommandUUID'] = str(uuid.uuid4())
+
+    # TODO: Replace this with devList queue
+    current_command = cmd_data
+    last_sent = pprint.pformat(current_command)
+    #devList[token?].addCommand(cmd_data)
+
+
+    # Send command to Apple
+    wrapper = APNSNotificationWrapper('PushCert.pem', False)
+    message = APNSNotification()
+    message.token(mylocal_DeviceToken)
+    message.appendProperty(APNSProperty('mdm', mylocal_PushMagic))
+    wrapper.append(message)
+    wrapper.notify()
+
+
 class queue_cmd_post:
     def POST(self):
         global current_command, last_sent, devList
@@ -295,36 +325,16 @@ class queue_cmd_post:
         for device in dev:
             for devP in devList:
                 if device[1] == devP[1]:
+                #if device[1] == devP.key (or .token?):
                     devListPrime.append(devP)
 
         for dev_creds in devListPrime:
-            mylocal_PushMagic = dev_creds[1]
-            mylocal_DeviceToken = dev_creds[2]
-            print mylocal_PushMagic
-            print mylocal_DeviceToken
-            #cmd = i.cmd
-            cmd_data = mdm_commands[cmd]
-            cmd_data['CommandUUID'] = str(uuid.uuid4())
-            current_command = cmd_data
-            last_sent = pprint.pformat(current_command)
+            queue(cmd, dev_creds)
 
-            # TODO: Push command to proper dev in devList
-	    
-	        # Send command to Apple
-            wrapper = APNSNotificationWrapper('PushCert.pem', False)
-            message = APNSNotification()
-            message.token(mylocal_DeviceToken)
-            message.appendProperty(APNSProperty('mdm', mylocal_PushMagic))
-            wrapper.append(message)
-            wrapper.notify()
-            
-        
 	    # Update page
         return update()
 	
 class do_mdm:        
-    #this line necessary? Does global make it a var global or go up 1 level of scope?
-    #global last_result, sm_obj
     def PUT(self):
         global current_command, last_result, sm_obj
         HIGH='[1;31m'
@@ -333,7 +343,7 @@ class do_mdm:
 
         i = web.data()
         pl = readPlistFromString(i)
-
+        # Does UDID or devToken come from web.data?
         # TODO: Consider replacing current_command with devList['command']
 
         if 'HTTP_MDM_SIGNATURE' in web.ctx.environ:
@@ -346,6 +356,7 @@ class do_mdm:
             #print i
             #print signature
 
+            # Verify client signature - necessary?
             buf = BIO.MemoryBuffer(signature)
             p7 = SMIME.load_pkcs7_bio(buf)
             data_bio = BIO.MemoryBuffer(i)
@@ -362,7 +373,8 @@ class do_mdm:
             print HIGH + "Idle Status" + NORMAL
             
             # TODO: Change current_command to dev_list[]?
-            # What should be the desired functionality for 'Idle'?
+            # Check device for que'd commands, if one exists, send it
+            # If no commands que'd - return ''
     
             # Hack to fix iOS7 infinite /server calls
             if(current_command=={}):
@@ -380,7 +392,9 @@ class do_mdm:
         elif pl.get('Status') == 'Acknowledged':
             print HIGH+"Acknowledged"+NORMAL
             rd = dict()
-
+            # A command has returned a response
+            # Add the response to the given device
+            #devList[token?].addResponse(cmd, pprint.pformat(pl))
         else:
             rd = dict()
             if pl.get('MessageType') == 'Authenticate':
@@ -397,7 +411,7 @@ class do_mdm:
         #print LOW, out, NORMAL
         q = pl.get('QueryResponses')
 
-        # TODO: Add this result to devList[UUID]['result'] instead
+        # TODO: Is last_result necessary anymore?
         last_result = pprint.pformat(pl)
 
         return out
@@ -435,6 +449,8 @@ def update():
     # Is called on page load and polling
 
     # TODO: Change last_result/sent to access devList
+    # Change dev_list to use class and send proper info
+    # This front page update should use name and IP (maybe token)?
 
     global last_result, last_sent, problems, devList
     
@@ -456,8 +472,34 @@ def update():
 class poll:
     def POST(self):
         # Polling function to update page with new data
-        # TODO: May need to take in additional (optional?) vars and pass to update()
         return update()
+
+
+class dev_update:
+    def POST(self):
+        pass
+
+        # Function to update (or return complete) data for a device
+        # Takes in a UDID (token?) and returns the relevant info
+        global devList
+
+
+        # Need to call queue(DeviceInfo, dev[])
+
+        # Format devList and info
+
+        #tuple = (IP, pushmagic, token, etc)
+        #out.append(tuple)
+
+        # Return JSON
+
+class dev_tab:
+    def POST(self)
+        pass
+        # Function to populate the device tab
+        # Uses data currently available in devList
+
+        # return JSON
 
 
 def do_TokenUpdate(pl):
@@ -467,6 +509,8 @@ def do_TokenUpdate(pl):
     my_DeviceToken = pl['Token'].data
     my_UnlockToken = pl['UnlockToken'].data
 
+    # This ClearPasscode needs to be moved to do_mdm
+    # ClearPasscode should get the unlock token from devList when called
     mdm_commands['ClearPasscode'] = dict(
         Command = dict(
             RequestType = 'ClearPasscode',
@@ -474,24 +518,23 @@ def do_TokenUpdate(pl):
         )
     )
 
+    # newTuple = (web.ctx.ip, my_PushMagic, my_DeviceToken, my_UnlockToken, nickname, [])
     newTuple = (web.ctx.ip, my_PushMagic, my_DeviceToken, my_UnlockToken)
     devList.append(newTuple)
 
-    # Check for duplicates in devList
-    # This check no longer needed
-    '''
-    for dev1 in devList:
-      found = False
-      for dev2 in devList:
-        if dev1[1] == dev2[1]:
-          if not found:
-             found = True
-          else:
-             devList.remove(dev2)
-    '''
+    # Create a new device
+    #devList[token?] = new Device(ip, push, token, unlock)
+
+    # Queue a DeviceInformation command to populate fields in devList
+    #queue('DeviceInformation', token?)
 
     devListP = devList
     devList = list(set(devListP))
+
+    # Output devices to creds.py for persistence
+    #for dev in devList:
+        #dev.output()
+
     out = "devList = ["
     for dev in devList:
         ipAddr = dev[0]
