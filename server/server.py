@@ -294,7 +294,7 @@ class queue_cmd_post:
 
         for device in dev:
             for devP in devList:
-                if devP[1] == devP[1]:
+                if device[1] == devP[1]:
                     devListPrime.append(devP)
 
         for dev_creds in devListPrime:
@@ -308,7 +308,7 @@ class queue_cmd_post:
             current_command = cmd_data
             last_sent = pprint.pformat(current_command)
 
-            # TODO: Push command to command_list
+            # TODO: Push command to proper dev in devList
 	    
 	        # Send command to Apple
             wrapper = APNSNotificationWrapper('PushCert.pem', False)
@@ -334,7 +334,7 @@ class do_mdm:
         i = web.data()
         pl = readPlistFromString(i)
 
-        # TODO: Will be replacing current_command with command_list[pl.UUID]
+        # TODO: Consider replacing current_command with devList['command']
 
         if 'HTTP_MDM_SIGNATURE' in web.ctx.environ:
             raw_sig = web.ctx.environ['HTTP_MDM_SIGNATURE']
@@ -361,12 +361,12 @@ class do_mdm:
         if pl.get('Status') == 'Idle':
             print HIGH + "Idle Status" + NORMAL
             
-            # TODO: Change current_command to command_list[UUID]?
+            # TODO: Change current_command to dev_list[]?
             # What should be the desired functionality for 'Idle'?
     
             # Hack to fix iOS7 infinite /server calls
             if(current_command=={}):
-                return writePlistToString(dict())
+                return ''
 
             rd = current_command
             print "%sSent: %s%s" % (HIGH, rd['Command']['RequestType'], NORMAL)
@@ -397,12 +397,12 @@ class do_mdm:
         #print LOW, out, NORMAL
         q = pl.get('QueryResponses')
 
-        # TODO: Add this result to command_list[UUID]['result'] instead
+        # TODO: Add this result to devList[UUID]['result'] instead
         last_result = pprint.pformat(pl)
 
         return out
 
-# Code for safer information printing
+# Code for safer information output
 # Hides important unique identifiers
 # See original MDM code for proper placement
 '''
@@ -434,8 +434,7 @@ def update():
     # Sends back dictionary of devices, last command, last result, problems
     # Is called on page load and polling
 
-    # TODO: Change last_result/sent to access command_list
-    # Take in the command UUID from server?
+    # TODO: Change last_result/sent to access devList
 
     global last_result, last_sent, problems, devList
     
@@ -457,7 +456,7 @@ def update():
 class poll:
     def POST(self):
         # Polling function to update page with new data
-        # TODO: Change to take in command UUID and pass to update()
+        # TODO: May need to take in additional (optional?) vars and pass to update()
         return update()
 
 
@@ -479,6 +478,8 @@ def do_TokenUpdate(pl):
     devList.append(newTuple)
 
     # Check for duplicates in devList
+    # This check no longer needed
+    '''
     for dev1 in devList:
       found = False
       for dev2 in devList:
@@ -487,6 +488,7 @@ def do_TokenUpdate(pl):
              found = True
           else:
              devList.remove(dev2)
+    '''
 
     devListP = devList
     devList = list(set(devListP))
