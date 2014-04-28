@@ -295,15 +295,11 @@ class queue_cmd_post:
                 if device[1] == devP[1]:
                     devListPrime.append(devP)
 
-        count = 0
-        print "*** SIZE IS: ***", len(devListPrime) #debug
         for dev_creds in devListPrime:
-            count+=1
-            print "*** QUEUE->DEV LOOP ***", count #debug
             mylocal_PushMagic = dev_creds[1]
             mylocal_DeviceToken = dev_creds[2]
-            print mylocal_PushMagic
-            print mylocal_DeviceToken
+            #print mylocal_PushMagic
+            #print mylocal_DeviceToken
             #cmd = i.cmd
             cmd_data = mdm_commands[cmd]
             cmd_data['CommandUUID'] = str(uuid.uuid4())
@@ -324,10 +320,7 @@ class queue_cmd_post:
         return update()
 	
 class do_mdm:        
-    #v this line necessary?
-    #global last_result, sm_obj
     def PUT(self):
-        print "**** do-mdm -> PUT ****"
         global current_command, last_result, sm_obj
         HIGH='[1;31m'
         LOW='[0;32m'
@@ -342,9 +335,7 @@ class do_mdm:
 
             signature = '\n-----BEGIN PKCS7-----\n%s\n-----END PKCS7-----\n' % cooked_sig
 
-
             #print i
-            #print signature
 
             buf = BIO.MemoryBuffer(signature)
             p7 = SMIME.load_pkcs7_bio(buf)
@@ -392,12 +383,11 @@ class do_mdm:
 
         out = writePlistToString(rd)
         #print LOW, out, NORMAL
-        print "**** END OF do_mdm ****"
         q = pl.get('QueryResponses')
         last_result = pprint.pformat(pl)
         return out
 
-# Code for safe printing
+# Code for safe output
 # Hides important unique identifiers
 # See original MDM code for proper placement
 '''
@@ -453,7 +443,6 @@ class poll:
 
 
 def do_TokenUpdate(pl):
-    print "***** do_TokenUpdate *****"
     global mdm_commands, devList
 
     my_PushMagic = pl['PushMagic']
@@ -469,16 +458,6 @@ def do_TokenUpdate(pl):
 
     newTuple = (web.ctx.ip, my_PushMagic, my_DeviceToken, my_UnlockToken)
     devList.append(newTuple)
-
-    # Check for duplicates in devList
-    for dev1 in devList:
-      found = False
-      for dev2 in devList:
-        if dev1[1] == dev2[1]:
-          if not found:
-             found = True
-          else:
-             devList.remove(dev2)
 
     devListP = devList
     devList = list(set(devListP))
@@ -572,8 +551,6 @@ class app_ipa:
 
 
 mdm_commands = setup_commands()
-#current_command = mdm_commands['DeviceLock']
-# ^ Is this line necessary?
 
 
 def log_data(out):
