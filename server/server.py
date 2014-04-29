@@ -1,4 +1,6 @@
 import web, os, pprint, json, uuid, sys, re
+import cPickle as pickle
+from device import device # Custom device class
 from plistlib import *
 from APNSWrapper import *
 from creds import *
@@ -86,6 +88,8 @@ CherryPyWSGIServer.ssl_private_key = "Server.key"
 last_result = ''
 last_sent = ''
 
+device_list = dict()
+
 global mdm_commands
 
 urls = (
@@ -106,6 +110,7 @@ urls = (
     '/getcommands', 'get_commands',
     '/devices', 'dev_tab',
     '/deviceupdate', 'dev_update',
+    '/debug', 'debug',
 )
 
 
@@ -292,17 +297,21 @@ def queue(cmd, dev_creds):
     mylocal_PushMagic = dev_creds[1]
     mylocal_DeviceToken = dev_creds[2]
 
-    #print mylocal_PushMagic
-    #print mylocal_DeviceToken
-
     cmd_data = mdm_commands[cmd]
     cmd_data['CommandUUID'] = str(uuid.uuid4())
 
     # TODO: Replace this with devList queue
     current_command = cmd_data
     last_sent = pprint.pformat(current_command)
-    #devList[token?].addCommand(cmd_data)
 
+    # Have to search through device_list using pushmagic or devtoken to get UDID
+    for key in device_list:
+        if device_list[key].deviceToken == mylocal_DeviceToken:
+            device_list[key].addCommand(cmd_data)
+            print "Adding CMD to device:", key
+            break
+
+    store_devices()
 
     # Send command to Apple
     wrapper = APNSNotificationWrapper('PushCert.pem', False)
@@ -312,6 +321,7 @@ def queue(cmd, dev_creds):
     wrapper.append(message)
     wrapper.notify()
 
+    
 
 class queue_cmd_post:
     def POST(self):
@@ -343,8 +353,6 @@ class do_mdm:
 
         i = web.data()
         pl = readPlistFromString(i)
-        # Does UDID or devToken come from web.data?
-        # TODO: Consider replacing current_command with devList['command']
 
         if 'HTTP_MDM_SIGNATURE' in web.ctx.environ:
             raw_sig = web.ctx.environ['HTTP_MDM_SIGNATURE']
@@ -372,7 +380,7 @@ class do_mdm:
         if pl.get('Status') == 'Idle':
             print HIGH + "Idle Status" + NORMAL
             
-            # TODO: Change current_command to dev_list[]?
+            # TODO: Change current_command to device_list?
             # Check device for que'd commands, if one exists, send it
             # If no commands que'd - return ''
     
@@ -394,7 +402,14 @@ class do_mdm:
             rd = dict()
             # A command has returned a response
             # Add the response to the given device
-            #devList[token?].addResponse(cmd, pprint.pformat(pl))
+            #device_list[pl['UDID']].addResponse(cmd???, pl)
+
+            # If we grab device information, we should also update the device info
+            if pl.get('QueryResponses'):
+                print "DeviceInformation should update here..."
+                p = pl['QueryResponses']
+                device_list[pl['UDID']].updateInfo(p['DeviceName'], p['ModelName'], p['OSVersion'])
+                store_devices()
         else:
             rd = dict()
             if pl.get('MessageType') == 'Authenticate':
@@ -494,12 +509,36 @@ class dev_update:
         # Return JSON
 
 class dev_tab:
-    def POST(self)
+    def POST(self):
         pass
         # Function to populate the device tab
         # Uses data currently available in devList
 
         # return JSON
+
+def store_devices():
+    # Function to convert the device list and write to a file
+    global device_list
+
+    print "STORING DEVICES..."
+    
+    # Pickle
+    pickle.dump(device_list, file('devicelist.pickle', 'w'))
+
+def read_devices():
+    # Function to open and read the device list
+    # Is called when the server loads
+    global device_list
+
+    # TODO: Add check to create devicelist.pickle if doesnt exist
+    try:
+        device_list = pickle.load(file('devicelist.pickle'))
+        print "LOADED PICKLE"
+        for key in device_list:
+            device_list[key].output()
+    except:
+        print "NO DATA IN PICKLE FILE or PICKLE FILE DOES NOT EXIST"
+        open('devicelist.pickle', 'a').close()
 
 
 def do_TokenUpdate(pl):
@@ -511,19 +550,36 @@ def do_TokenUpdate(pl):
 
     # This ClearPasscode needs to be moved to do_mdm
     # ClearPasscode should get the unlock token from devList when called
+    '''
     mdm_commands['ClearPasscode'] = dict(
         Command = dict(
             RequestType = 'ClearPasscode',
             UnlockToken = Data(my_UnlockToken)
         )
     )
+    '''
 
-    # newTuple = (web.ctx.ip, my_PushMagic, my_DeviceToken, my_UnlockToken, nickname, [])
+
     newTuple = (web.ctx.ip, my_PushMagic, my_DeviceToken, my_UnlockToken)
     devList.append(newTuple)
 
-    # Create a new device
-    #devList[token?] = new Device(ip, push, token, unlock)
+
+    
+    print "NEW DEVICE UDID:", pl.get('UDID')
+    # A new device has enrolled, add a new device
+    if pl.get('UDID') not in device_list:
+        print "ADDING DEVICE TO DEVICE_LIST"
+        # Device does not already exist, create new instance of device
+
+
+        device_list[pl.get('UDID')] = device(UDID=pl['UDID'], tuple=newTuple)
+
+        #queue up deviceInformation
+    else:
+        # Device exists, update information - token stays the same
+        device_list[pl['UDID']].reenroll(web.ctx.ip, my_PushMagic, my_UnlockToken)
+        print "DEVICE ALREADY EXISTS, UPDATE INFORMATION"
+
 
     # Queue a DeviceInformation command to populate fields in devList
     #queue('DeviceInformation', token?)
@@ -531,9 +587,8 @@ def do_TokenUpdate(pl):
     devListP = devList
     devList = list(set(devListP))
 
-    # Output devices to creds.py for persistence
-    #for dev in devList:
-        #dev.output()
+    # Store devices in a file for persistence
+    store_devices()
 
     out = "devList = ["
     for dev in devList:
@@ -625,6 +680,13 @@ class app_ipa:
         else:
             return web.ok
 
+class debug:
+    def GET(self):
+        # Function to allow for on demand debug printing
+        global device_list
+        for dev in device_list:
+            device_list[dev].print_device()
+
 
 def log_data(out):
     fd = open(LOGFILE, "a")
@@ -633,6 +695,7 @@ def log_data(out):
     fd.close()
 
 mdm_commands = setup_commands()
+read_devices()
 
 if __name__ == "__main__":
     print "Starting Server" 
