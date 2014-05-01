@@ -291,19 +291,15 @@ class root:
     def GET(self):
         return web.redirect("/static/index.html")
 
-def queue(cmd, dev_creds):
-    # TODO: Change queue to take in device_list rather than devList
-    global current_command, last_sent, devList
+def queue(cmd, dev_UDID):
+    # Function to add a command to a device's queue
 
-    mylocal_PushMagic = dev_creds[1]
-    mylocal_DeviceToken = dev_creds[2]
+    global device_list, mdm_commands
+
+    mylocal_PushMagic, mylocal_DeviceToken = device_list[dev_UDID].getQueueInfo()
 
     cmd_data = mdm_commands[cmd]
     cmd_data['CommandUUID'] = str(uuid.uuid4())
-
-    # TODO: Replace this with devList queue
-    current_command = cmd_data
-    last_sent = pprint.pformat(current_command)
 
     # Have to search through device_list using pushmagic or devtoken to get UDID
     for key in device_list:
@@ -327,28 +323,31 @@ def queue(cmd, dev_creds):
 
 class queue_cmd_post:
     def POST(self):
-        global current_command, last_sent, devList
+        global current_command, last_sent, device_list
         
-        devListPrime = []
+        UDID_list = []
+        # TODO: Change frontend to return UDID
         i = json.loads(web.data())
         cmd = i.pop("cmd", [])
         dev = i.pop("dev[]", [])
 
-        for device in dev:
-            for devP in devList:
-                if device[1] == devP[1]:
-                #if device[1] == devP.key (or .token?):
-                    devListPrime.append(devP)
+        # FORMAT: dev = [[IP, pushmagic], [IP, pushmagic]]
 
-        for dev_creds in devListPrime:
-            queue(cmd, dev_creds)
+        for device in dev:
+            for UDID in device_list:
+                #if device[UDID???] == devP.getUDID():
+                if device_list[UDID].pushMagic == device[1]: # Temp until frontend uses UDID
+                    UDID_list.append(UDID)
+
+        for UDID in UDID_list:
+            queue(cmd, UDID)
 
 	    # Update page
         return update()
 	
 class do_mdm:        
     def PUT(self):
-        global current_command, last_result, sm_obj
+        global sm_obj, device_list
         HIGH='[1;31m'
         LOW='[0;32m'
         NORMAL='[0;39m'
@@ -384,20 +383,14 @@ class do_mdm:
             
             # TODO: Switch fulltime to device_list and remove current command
             print "*FETCHING COMMAND TO BE SENT FROM DEV:", pl['UDID']
-            rd_temp = device_list[pl['UDID']].sendCommand()
+            rd = device_list[pl['UDID']].sendCommand()
 
             # If no commands in queue, return empty string to avoid infinite idle loop
             # TODO: When switch to device_list, enable this by removing '0 and'  
-            if(0 and not rd_temp):
+            if(not rd):
                 return ''
 
-            # Hack to fix iOS7 infinite /server calls
-            if(current_command=={}):
-                return ''
-
-            rd = current_command
             print "%sSent: %s%s" % (HIGH, rd['Command']['RequestType'], NORMAL)
-            current_command={}
 
         elif pl.get('MessageType') == 'TokenUpdate':
             print HIGH+"Token Update"+NORMAL
@@ -435,10 +428,6 @@ class do_mdm:
 
         # This is used only for safe printing
         q = pl.get('QueryResponses')
-
-
-        # TODO: Is last_result necessary anymore?
-        last_result = pprint.pformat(pl)
 
         return out
 
@@ -478,12 +467,12 @@ def update():
     # Change dev_list to use class and send proper info
     # This front page update should use name and IP (maybe token)?
 
-    global last_result, last_sent, problems, devList
+    global last_result, last_sent, problems, device_list
     
     # Create list of devices
     dev_list_out = []
-    for dev_creds in devList:
-        dev_list_out.append([dev_creds[0], dev_creds[1]])
+    for UDID in device_list:
+        dev_list_out.append([device_list[UDID].IP, device_list[UDID].pushMagic])
     
     # Format output as a dict and then return as JSON
     out = dict()
@@ -555,7 +544,7 @@ def read_devices():
 
 
 def do_TokenUpdate(pl):
-    global mdm_commands, devList
+    global mdm_commands
 
     my_PushMagic = pl['PushMagic']
     my_DeviceToken = pl['Token'].data
@@ -572,12 +561,9 @@ def do_TokenUpdate(pl):
     )
     '''
 
-
     newTuple = (web.ctx.ip, my_PushMagic, my_DeviceToken, my_UnlockToken)
-    devList.append(newTuple)
 
 
-    
     print "NEW DEVICE UDID:", pl.get('UDID')
     # A new device has enrolled, add a new device
     if pl.get('UDID') not in device_list:
@@ -585,7 +571,7 @@ def do_TokenUpdate(pl):
         # Device does not already exist, create new instance of device
 
         device_list[pl.get('UDID')] = device(pl['UDID'], newTuple)
-        device_list[pl.get('UDID')] = device(UDID=pl['UDID'], tuple=newTuple)
+        #device_list[pl.get('UDID')] = device(UDID=pl['UDID'], tuple=newTuple)
 
     else:
         # Device exists, update information - token stays the same
@@ -595,7 +581,7 @@ def do_TokenUpdate(pl):
 
     # Queue a DeviceInformation command to populate fields in devList
     # TODO: enable queue call with proper parameters
-    #queue('DeviceInformation', token?)
+    queue('DeviceInformation', pl['UDID'])
 
     devListP = devList
     devList = list(set(devListP))
@@ -603,22 +589,6 @@ def do_TokenUpdate(pl):
     # Store devices in a file for persistence
     store_devices()
 
-    out = "devList = ["
-    for dev in devList:
-        ipAddr = dev[0]
-        pushMagic = dev[1]
-        deviceToken = dev[2]
-        unlockToken = dev[3]
-
-        sp12 = 12*' '
-        out += "\n%s( '%s'\n%s, '%s'\n%s, %s\n%s, %s\n%s),\n        " % (sp12, ipAddr, sp12, pushMagic, sp12, repr(deviceToken), sp12, repr(unlockToken), sp12)
-
-    out +=']'    
-
-    fd = open('creds.py', 'w')
-    fd.write(out)
-    fd.close()
-    
     # Why return empty dictionary?
     return dict()
 
@@ -719,4 +689,4 @@ if __name__ == "__main__":
     try:
         app.run()
     except:
-        os.exit(0)
+        sys.exit(0)

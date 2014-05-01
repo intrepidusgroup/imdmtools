@@ -30,6 +30,10 @@ class device:
     def getUDID(self):
         return self.UDID
 
+    def getQueueInfo(self):
+        # Returns information needed by queue function
+        return self.pushMagic, self.deviceToken
+
     def updateInfo(self, newName, newModel, newOS):
         # Update class variables with data from DeviceInformation
         self.name = newName
