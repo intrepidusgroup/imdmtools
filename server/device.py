@@ -10,40 +10,22 @@ class device:
     model = ''
     OS = ''
 
-    queue = deque() # Array to hold commands that HAVE NOT been sent    
+    queue = deque() # Queue to hold commands that HAVE NOT been sent    
     cmdList = {} # Dictionary to hold commands and responses that HAVE been sent
+                 # Keys are Command UUID, value is an array [command, response]
 
     # Possible additional parameters
+    # Note that adding parameters will void pickle list and may require device reregistration
     #availableCapacity = 0
     #totalCapacity = 0
     #installedApps = []
 
-    def __init__(self, *args, **kwargs):
-        if kwargs.get('dictionary'):
-            self.__setup_dict(kwargs['dictionary'])
-        else:
-            self.__setup(kwargs['UDID'], kwargs['tuple'])
-
-    def __setup(self, newUDID, tuple):
+    def __init__(self, newUDID, tuple):
         self.UDID = newUDID
         self.IP = tuple[0]
         self.pushMagic = tuple[1]
         self.deviceToken = tuple[2]
         self.unlockToken = tuple[3]
-    def __setup_dict(self, storage):
-        # Sets up device from read in data
-        self.IP = storage['IP']
-        self.pushMagic = storage['pushmagic']
-        self.deviceToken = storage['deviceToken']
-        self.unlockToken = storage['unlockToken']
-        self.UDID = storage['UDID']
-        self.name = storage['name']
-        self.model = storage['model']
-        self.OS = storage['OS']
-
-        # May need to rework queue since its type deque
-        self.queue = storage['queue']    
-        self.cmdList = storage['cmdList']
 
     def getUDID(self):
         return self.UDID
@@ -61,22 +43,31 @@ class device:
 
     def addCommand(self, cmd):
         # Add a new command to the queue
+        print "ADDED COMMAND TO QUEUE:", cmd['CommandUUID']
         self.queue.append(cmd)
 
     def sendCommand(self):
         # Pop command off queue to be sent to the device
+        if len(self.queue) == 0:
+            print "**ERROR: Attempting to fetch command, but no command in queue"
+            return ''
+
         cmd = self.queue.popleft()
-        cmdList[cmd] = ''
+        self.cmdList[cmd['CommandUUID']] = ["", '']
+        self.cmdList[cmd['CommandUUID']][0] = cmd
+        print "**Sending command", cmd['CommandUUID'], "and moving it from queue**"
         return cmd
 
 
-    def addResponse(self, cmd, response):
+    def addResponse(self, cmdUUID, response):
         # Add a response to correspond with a previous command
-        cmdList[cmd] = response # If only it was this easy...
-        #search queue, queue[x][1] = response
+        print "**ADDING RESPONSE TO CMD:", cmdUUID
+        print self.cmdList.keys()
+        #self.cmdList[cmdUUID][1] = response
+
 
     def output(self):
-        # DEPRICATED
+        # DEPRICATED - pickle module takes care of this
         # Convert data into a dictionary for persistence storage
         d = dict()
         d['IP'] = self.IP

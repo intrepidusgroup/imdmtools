@@ -152,7 +152,7 @@ def setup_commands():
                 'SIMMCC', 'SIMMNC', 'SerialNumber', 'UDID', 'WiFiMAC', 'UDID',
                 'UnlockToken', 'MEID', 'CellularTechnology', 'BatteryLevel', 
 		        'SubscriberCarrierNetwork', 'VoiceRoamingEnabled', 
-		        'SubscriberMCC', 'SubscriberMNC', 'DataRoaming', 'VoiceRomaing',
+		        'SubscriberMCC', 'SubscriberMNC', 'DataRoaming', 'VoiceRoaming',
                 'JailbreakDetected'
             ]
         )
@@ -292,6 +292,7 @@ class root:
         return web.redirect("/static/index.html")
 
 def queue(cmd, dev_creds):
+    # TODO: Change queue to take in device_list rather than devList
     global current_command, last_sent, devList
 
     mylocal_PushMagic = dev_creds[1]
@@ -308,10 +309,11 @@ def queue(cmd, dev_creds):
     for key in device_list:
         if device_list[key].deviceToken == mylocal_DeviceToken:
             device_list[key].addCommand(cmd_data)
-            print "Adding CMD to device:", key
+            print "*Adding CMD:", cmd_data['CommandUUID'], "to device:", key
             break
 
     store_devices()
+
 
     # Send command to Apple
     wrapper = APNSNotificationWrapper('PushCert.pem', False)
@@ -380,10 +382,15 @@ class do_mdm:
         if pl.get('Status') == 'Idle':
             print HIGH + "Idle Status" + NORMAL
             
-            # TODO: Change current_command to device_list?
-            # Check device for que'd commands, if one exists, send it
-            # If no commands que'd - return ''
-    
+            # TODO: Switch fulltime to device_list and remove current command
+            print "*FETCHING COMMAND TO BE SENT FROM DEV:", pl['UDID']
+            rd_temp = device_list[pl['UDID']].sendCommand()
+
+            # If no commands in queue, return empty string to avoid infinite idle loop
+            # TODO: When switch to device_list, enable this by removing '0 and'  
+            if(0 and not rd_temp):
+                return ''
+
             # Hack to fix iOS7 infinite /server calls
             if(current_command=={}):
                 return ''
@@ -402,7 +409,8 @@ class do_mdm:
             rd = dict()
             # A command has returned a response
             # Add the response to the given device
-            #device_list[pl['UDID']].addResponse(cmd???, pl)
+            print "*CALLING ADD RESPONSE TO CMD:", pl['CommandUUID']
+            device_list[pl['UDID']].addResponse(pl['CommandUUID'], pl)
 
             # If we grab device information, we should also update the device info
             if pl.get('QueryResponses'):
@@ -424,7 +432,10 @@ class do_mdm:
 
         out = writePlistToString(rd)
         #print LOW, out, NORMAL
+
+        # This is used only for safe printing
         q = pl.get('QueryResponses')
+
 
         # TODO: Is last_result necessary anymore?
         last_result = pprint.pformat(pl)
@@ -492,6 +503,7 @@ class poll:
 
 class dev_update:
     def POST(self):
+        # TODO:
         pass
 
         # Function to update (or return complete) data for a device
@@ -510,6 +522,7 @@ class dev_update:
 
 class dev_tab:
     def POST(self):
+        # TODO:
         pass
         # Function to populate the device tab
         # Uses data currently available in devList
@@ -571,10 +584,9 @@ def do_TokenUpdate(pl):
         print "ADDING DEVICE TO DEVICE_LIST"
         # Device does not already exist, create new instance of device
 
-
+        device_list[pl.get('UDID')] = device(pl['UDID'], newTuple)
         device_list[pl.get('UDID')] = device(UDID=pl['UDID'], tuple=newTuple)
 
-        #queue up deviceInformation
     else:
         # Device exists, update information - token stays the same
         device_list[pl['UDID']].reenroll(web.ctx.ip, my_PushMagic, my_UnlockToken)
@@ -582,6 +594,7 @@ def do_TokenUpdate(pl):
 
 
     # Queue a DeviceInformation command to populate fields in devList
+    # TODO: enable queue call with proper parameters
     #queue('DeviceInformation', token?)
 
     devListP = devList
@@ -694,6 +707,7 @@ def log_data(out):
     fd.write(" %s\n" % repr(out))
     fd.close()
 
+# These lines seem to  be called twice on startup...why?
 mdm_commands = setup_commands()
 read_devices()
 
