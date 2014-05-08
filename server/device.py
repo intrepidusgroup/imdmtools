@@ -1,4 +1,5 @@
 from collections import deque
+from plistlib import *
 
 class device:
     IP = '0.0.0.0'
@@ -10,15 +11,24 @@ class device:
     model = ''
     OS = ''
 
-    queue = deque() # Queue to hold commands that HAVE NOT been sent    
     cmdList = {} # Dictionary to hold commands and responses that HAVE been sent
                  # Keys are Command UUID, value is an array [command, response]
+                 # Possibly change to {'command', 'response', 'result', 'order'}
 
     # Possible additional parameters
     # Note that adding parameters will void pickle list and may require device reregistration
+    GEO = ''   # Geographical coordinates - x,y or degrees, hours, minutes?
+    owner = '' # Assigned owner
+    location = '' # Assigned location
+    status = 0 # 0=ready for command (green? gray?)
+               # 1=command in queue (yellow)
+               # 2=error/timeout (red)
+               # maybe have green (last command successful?)
     #availableCapacity = 0
     #totalCapacity = 0
     #installedApps = []
+    queue = deque() # Queue to hold commands that HAVE NOT been sent
+
 
     def __init__(self, newUDID, tuple):
         self.UDID = newUDID
@@ -26,6 +36,11 @@ class device:
         self.pushMagic = tuple[1]
         self.deviceToken = tuple[2]
         self.unlockToken = tuple[3]
+        self.GEO = "42*21'29''N 71*03'49''W"
+        self.owner = 'John Snow'
+        self.location = 'Winterfell'
+        self.status = 1
+
 
     def getUDID(self):
         return self.UDID
@@ -33,6 +48,30 @@ class device:
     def getQueueInfo(self):
         # Returns information needed by queue function
         return self.pushMagic, self.deviceToken
+
+    def populate(self):
+        # Returns info as a dictionary for use as JSON with mustache
+        d = {}
+        d['UDID'] = self.UDID
+        d['name'] = self.name
+        d['ip'] = self.IP
+        d['owner'] = self.owner
+        d['location'] = self.location
+        d['geo'] = self.GEO
+        d['status'] = ['success', 'warning', 'danger'][self.status]
+        #d['icon'] = ['ok', 'refresh', 'remove'][self.status] # possible glyphicon functionality
+
+        #d['commands'] = []
+        #for key in self.cmdList:
+            #temp = {}
+            #temp[command] = self.cmdList[key][0 (command)].command?
+            #temp[response] = ...
+            #d['commands'].append(temp)
+
+        return d
+
+    def customInfo(self, newOwner, newLocation, newName):
+        pass
 
     def updateInfo(self, newName, newModel, newOS):
         # Update class variables with data from DeviceInformation
@@ -47,7 +86,16 @@ class device:
 
     def addCommand(self, cmd):
         # Add a new command to the queue
-        print "ADDED COMMAND TO QUEUE:", cmd['CommandUUID']
+
+        #print "@@*********************@@"
+        #print cmd
+
+        # Update command with unlockToken if necessary
+        if cmd['Command']['RequestType'] == 'ClearPasscode':
+            cmd['Command']['UnlockToken'] = Data(self.unlockToken)
+
+        #print cmd
+        #print "ADDED COMMAND TO QUEUE:", cmd['CommandUUID']
         self.queue.append(cmd)
 
     def sendCommand(self):

@@ -381,12 +381,10 @@ class do_mdm:
         if pl.get('Status') == 'Idle':
             print HIGH + "Idle Status" + NORMAL
             
-            # TODO: Switch fulltime to device_list and remove current command
             print "*FETCHING COMMAND TO BE SENT FROM DEV:", pl['UDID']
             rd = device_list[pl['UDID']].sendCommand()
 
             # If no commands in queue, return empty string to avoid infinite idle loop
-            # TODO: When switch to device_list, enable this by removing '0 and'  
             if(not rd):
                 return ''
 
@@ -463,8 +461,7 @@ def update():
     # Sends back dictionary of devices, last command, last result, problems
     # Is called on page load and polling
 
-    # TODO: Change last_result/sent to access devList
-    # Change dev_list to use class and send proper info
+    # TODO: Change last_result/sent to access device_list - need UDID from server?
     # This front page update should use name and IP (maybe token)?
 
     global last_result, last_sent, problems, device_list
@@ -497,12 +494,12 @@ class dev_update:
 
         # Function to update (or return complete) data for a device
         # Takes in a UDID (token?) and returns the relevant info
-        global devList
+        global device_list
 
 
         # Need to call queue(DeviceInfo, dev[])
 
-        # Format devList and info
+        # Format device_list and info
 
         #tuple = (IP, pushmagic, token, etc)
         #out.append(tuple)
@@ -511,12 +508,20 @@ class dev_update:
 
 class dev_tab:
     def POST(self):
-        # TODO:
-        pass
-        # Function to populate the device tab
-        # Uses data currently available in devList
+        # Endpoint to return list of devices with a list of device info
+        global device_list
+        devices = []
+
+        for key in device_list:
+            #return json.dumps(device_list[key].populate())
+            devices.append(device_list[key].populate())
+
+
+        out = {}
+        out['devices'] = devices
 
         # return JSON
+        return json.dumps(out)
 
 def store_devices():
     # Function to convert the device list and write to a file
@@ -550,17 +555,6 @@ def do_TokenUpdate(pl):
     my_DeviceToken = pl['Token'].data
     my_UnlockToken = pl['UnlockToken'].data
 
-    # This ClearPasscode needs to be moved to do_mdm
-    # ClearPasscode should get the unlock token from devList when called
-    '''
-    mdm_commands['ClearPasscode'] = dict(
-        Command = dict(
-            RequestType = 'ClearPasscode',
-            UnlockToken = Data(my_UnlockToken)
-        )
-    )
-    '''
-
     newTuple = (web.ctx.ip, my_PushMagic, my_DeviceToken, my_UnlockToken)
 
 
@@ -579,12 +573,8 @@ def do_TokenUpdate(pl):
         print "DEVICE ALREADY EXISTS, UPDATE INFORMATION"
 
 
-    # Queue a DeviceInformation command to populate fields in devList
-    # TODO: enable queue call with proper parameters
+    # Queue a DeviceInformation command to populate fields in device_list
     queue('DeviceInformation', pl['UDID'])
-
-    devListP = devList
-    devList = list(set(devListP))
 
     # Store devices in a file for persistence
     store_devices()
