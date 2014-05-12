@@ -109,7 +109,7 @@ urls = (
     '/poll', 'poll',
     '/getcommands', 'get_commands',
     '/devices', 'dev_tab',
-    '/deviceupdate', 'dev_update',
+    '/response', 'get_response',
     '/debug', 'debug',
 )
 
@@ -323,23 +323,13 @@ def queue(cmd, dev_UDID):
 
 class queue_cmd_post:
     def POST(self):
-        global current_command, last_sent, device_list
+        global device_list
         
-        UDID_list = []
-        # TODO: Change frontend to return UDID
         i = json.loads(web.data())
         cmd = i.pop("cmd", [])
         dev = i.pop("dev[]", [])
 
-        # FORMAT: dev = [[IP, pushmagic], [IP, pushmagic]]
-
-        for device in dev:
-            for UDID in device_list:
-                #if device[UDID???] == devP.getUDID():
-                if device_list[UDID].pushMagic == device[1]: # Temp until frontend uses UDID
-                    UDID_list.append(UDID)
-
-        for UDID in UDID_list:
+        for UDID in dev:
             queue(cmd, UDID)
 
 	    # Update page
@@ -464,7 +454,7 @@ def update():
     # TODO: Change last_result/sent to access device_list - need UDID from server?
     # This front page update should use name and IP (maybe token)?
 
-    global last_result, last_sent, problems, device_list
+    global problems, device_list
     
     # Create list of devices
     dev_list_out = []
@@ -474,8 +464,6 @@ def update():
     # Format output as a dict and then return as JSON
     out = dict()
     out['dev_list'] = dev_list_out
-    out['last_cmd'] = last_sent
-    out['last_result'] = last_result
     out['problems'] = '<br>'.join(problems)
 
     return json.dumps(out)
@@ -486,25 +474,18 @@ class poll:
         # Polling function to update page with new data
         return update()
 
-
-class dev_update:
+class get_response:
     def POST(self):
-        # TODO:
-        pass
-
-        # Function to update (or return complete) data for a device
-        # Takes in a UDID (token?) and returns the relevant info
+        # Endpoint to return a reponse given a UDID and command UUID
         global device_list
+        
+        #i = web.data()
+        i = json.loads(web.data())
+        print "************"
+        print i
 
+        return device_list[i['UDID']].getResponse(i['UUID'])
 
-        # Need to call queue(DeviceInfo, dev[])
-
-        # Format device_list and info
-
-        #tuple = (IP, pushmagic, token, etc)
-        #out.append(tuple)
-
-        # Return JSON
 
 class dev_tab:
     def POST(self):

@@ -1,5 +1,6 @@
 from collections import deque
 from plistlib import *
+from operator import itemgetter
 
 class device:
     IP = '0.0.0.0'
@@ -39,7 +40,7 @@ class device:
         self.GEO = "42*21'29''N 71*03'49''W"
         self.owner = 'John Snow'
         self.location = 'Winterfell'
-        self.status = 1
+        self.status = 0
 
 
     def getUDID(self):
@@ -48,6 +49,9 @@ class device:
     def getQueueInfo(self):
         # Returns information needed by queue function
         return self.pushMagic, self.deviceToken
+
+    def getResponse(self, cmdUUID):
+        return self.cmdList[cmdUUID]['response']
 
     def populate(self):
         # Returns info as a dictionary for use as JSON with mustache
@@ -61,12 +65,9 @@ class device:
         d['status'] = ['success', 'warning', 'danger'][self.status]
         #d['icon'] = ['ok', 'refresh', 'remove'][self.status] # possible glyphicon functionality
 
-        #d['commands'] = []
-        #for key in self.cmdList:
-            #temp = {}
-            #temp[command] = self.cmdList[key][0 (command)].command?
-            #temp[response] = ...
-            #d['commands'].append(temp)
+        d['commands'] = []
+        for key in self.cmdList:
+            d['commands'].append(self.cmdList[key])
 
         return d
 
@@ -95,7 +96,7 @@ class device:
             cmd['Command']['UnlockToken'] = Data(self.unlockToken)
 
         #print cmd
-        #print "ADDED COMMAND TO QUEUE:", cmd['CommandUUID']
+        print "ADDED COMMAND TO QUEUE:", cmd['CommandUUID']
         self.queue.append(cmd)
 
     def sendCommand(self):
@@ -105,8 +106,11 @@ class device:
             return ''
 
         cmd = self.queue.popleft()
-        self.cmdList[cmd['CommandUUID']] = ["", '']
-        self.cmdList[cmd['CommandUUID']][0] = cmd
+        self.cmdList[cmd['CommandUUID']] = {}
+        self.cmdList[cmd['CommandUUID']]['cmd'] = cmd
+        self.cmdList[cmd['CommandUUID']]['response'] = ''
+        self.cmdList[cmd['CommandUUID']]['status'] = 'warning'
+        self.cmdList[cmd['CommandUUID']]['order'] = len(self.cmdList.keys())
         print "**Sending command", cmd['CommandUUID'], "and moving it from queue**"
         return cmd
 
@@ -115,7 +119,9 @@ class device:
         # Add a response to correspond with a previous command
         print "**ADDING RESPONSE TO CMD:", cmdUUID
         print self.cmdList.keys()
-        #self.cmdList[cmdUUID][1] = response
+        self.cmdList[cmdUUID]['response'] = response
+        # Check response to see if error? if so, status=3
+        self.cmdList[cmdUUID]['status'] = 'success'
 
 
     def output(self):

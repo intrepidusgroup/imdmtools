@@ -45,8 +45,11 @@
             </select>
         </div><!-- /.col-md-4 -->
 
-        <!--Hidden dropdown goes here-->
-        <div class="col-md-4 text-center"></div>
+        <!--Hidden dropdown will goes here-->
+        <div class="col-md-4 text-center">
+
+        </div><!-- /.col-md-4 -->
+
 
         <div class="col-md-4 text-center">
           <br>
@@ -60,11 +63,23 @@
       </div>
 
 
-
-
-
-
-
+<!-- Modal -->
+<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="myModalLabel">Response:</h4>
+      </div>
+      <div class="modal-body" id="modal_body">
+        ...
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 
     </div><!-- /.container -->
@@ -83,7 +98,7 @@
 <div class="panel panel-{{status}}" id="{{UDID}}">
   <div class="panel-heading">
     <h4 class="panel-title">
-      <div class="col-md-1"><input type="checkbox" name="box" /></div>
+      <div class="col-md-1"><input class="row_box" UDUD="{{UDID}}" type="checkbox" name="box" /></div>
       <a data-toggle="collapse" data-parent="#accordion" href="#collapse{{UDID}}">
         <div class="row">
           <div class="col-md-4">{{name}}</div>
@@ -97,21 +112,38 @@
   <div class="panel-collapse collapse" id="collapse{{UDID}}">
     <div class="panel-body">
       <div class="col-md-1"></div>
-        <div class="col-md-4">UDID:{{UDID}}</div>
-        <div class="col-md-3">IP:{{ip}}</div>
+        <div class="col-md-4">UDID: {{UDID}}</div>
+        <div class="col-md-3">IP: {{ip}}</div>
         <div class="col-md-3"><span class="glyphicon glyphicon-globe"></span> {{geo}}</div>
       </div>
+
+<table class="table table-condensed">
+<thead>
+<tr>
+<th>Status</th>
+<th>Command</th>
+<th>Options</th>
+</tr>
+</thead>
+<tbody>
+{{#commands}}
+<tr id="command{{cmd.CommandUUID}}">
+<td>*</td>
+<td>{{cmd.Command.RequestType}}</td>
+<td><button type="button" class="btn btn-xs btn-primary" id="{{cmd.CommandUUID}}" data-toggle="modal" data-target="#modal">Response</button></td>
+</tr>
+{{/commands}}
+</tbody>
+</table>
     </div>
   </div>
 </div>
+
 {{/devices}}
 </script>
 
     <script>
     function update(dev_list, last_cmd, last_result, problems){
-      document.getElementById("commandsent").innerHTML = last_cmd;
-      document.getElementById("result").innerHTML = last_result;
-      document.getElementById("error").innerHTML = problems;
 
       // Re-populate devices list
       x = document.getElementById("devices")
@@ -129,7 +161,7 @@
       // This should only be executed if we have changes to device list
       // Check current devices for selections and update new device list so selections are not lost
       var isSelected = false;
-      console.log("Reached need to update devices area");
+      //console.log("Reached need to update devices area");
       for(j=0;j<dev_list.length;j++){
         isSelected = false;
         for(i=0;i<x.options.length;i++){
@@ -157,20 +189,46 @@
       }
     }
 
+    var checksum = ''
+
     function populate_devices(){
       // Populates device accordion using data from server
       $.post("/devices", function(raw){
-        console.log(raw);
+        
+        if(checksum == JSON.stringify(raw)){
+          return;
+        }
+        else{
+          checksum = JSON.stringify(raw);
+        }
+
+        //console.log(raw);
         var view = jQuery.parseJSON(raw);
         var template = $('#template').html();
-        console.log(template);
+        //console.log(template);
         //a = document.getElementByID("accordion");
         var rendered = Mustache.render(template, view);
 
         //a.html(rendered);        
         $('#accordion').html(rendered);
         // maybe clear accordion?
-        console.log(rendered);
+        //console.log(rendered);
+
+      $(".btn-xs").click(function(event){
+        console.log("here");
+        var udid = $(this).closest(".panel").attr("id");
+        var uuid = $(this).attr("id");
+        console.log(udid);
+        console.log(uuid);
+        //$("#modal_body").html(udid);
+
+        // Call /response with UDID and command UUID
+        $.post("/response", JSON.stringify({"UDID":udid, "UUID":uuid}), function(data){
+          $("#modal_body").html(data);
+        });
+
+
+      });
 
 
       });
@@ -215,6 +273,8 @@
       //testing...
       populate_devices();
 
+      setInterval(populate_devices, 3000);
+
       // Check for device-specific content and enable if applicable
       if(checkDevice()){
         document.getElementById("showEnroll").style.display="block";
@@ -222,34 +282,34 @@
       }
 
       $("#submit1").click(function(event){
+        var checked_devices = [];
+
+        $(".row_box").each(function(){
+          if(this.checked){
+            checked_devices.push($(this).closest(".panel").attr("id"));
+          }
+        });
+
         // Input checking.
         if ($("#commands").val()==0){
           alert("Please choose a command.");
         }
-        else if ($("#devices").val()==null){
+        else if (checked_devices.length==0){
           alert("Please choose one or more devices.");
         }
         else{
           // Send AJAX request
-          var dev_out = [];
-          devs = document.getElementById("devices").options
-          for(i=0;i<devs.length;i++){
-            temp = [];
-            temp.push(devs[i].text);
-            temp.push(devs[i].value);
-            dev_out.push(temp);
-          }
 
           // Variable to pass all necessary data to server
           var parameters = {
             "cmd":$("#commands").val(),
-            "dev[]":dev_out
+            "dev[]":checked_devices
           };
 
           // Use stringify to fix odd error with passing just parameters
           $.post("/queue", JSON.stringify(parameters), function(data){
             data = JSON.parse(data);
-            update(data["dev_list"], data["last_cmd"], data["last_result"], data["problems"]);
+            //update(data["dev_list"], data["last_cmd"], data["last_result"], data["problems"]);
           });
         }
       });
