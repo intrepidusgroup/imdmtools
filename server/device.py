@@ -93,7 +93,7 @@ class device:
     def sendCommand(self):
         # Pop command off queue to be sent to the device
         if len(self.queue) == 0:
-            print "**Attempting to fetch command, but no command in queue"
+            print "**No commands left in queue"
             return ''
 
         cmd = self.queue.popleft()
