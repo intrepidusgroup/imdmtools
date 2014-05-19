@@ -1,11 +1,10 @@
-import web, os, pprint, json, uuid, sys, re
+import web, os, json, uuid, sys
 import cPickle as pickle
 from device import device # Custom device class
 from plistlib import *
 from APNSWrapper import *
 from problems import *
 from datetime import datetime
-from subprocess import call
 # needed to handle verification of signed messages from devices
 from M2Crypto import SMIME, X509, BIO
 
