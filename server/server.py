@@ -525,10 +525,9 @@ def read_devices():
     try:
         device_list = pickle.load(file('devicelist.pickle'))
         print "LOADED PICKLE"
-        for key in device_list:
-            device_list[key].output()
     except:
         print "NO DATA IN PICKLE FILE or PICKLE FILE DOES NOT EXIST"
+        # Creating new pickle file if need be
         open('devicelist.pickle', 'a').close()
 
 
@@ -646,9 +645,6 @@ def log_data(out):
     fd.write(" %s\n" % repr(out))
     fd.close()
 
-# These lines seem to  be called twice on startup...why?
-mdm_commands = setup_commands()
-read_devices()
 
 if __name__ == "__main__":
     print "Starting Server" 
@@ -659,3 +655,10 @@ if __name__ == "__main__":
         app.run()
     except:
         sys.exit(0)
+else:
+    # app.run() seems to use server.py as a module
+    # Placing these in main causes them not to run
+    # Placing these above main causes them to run twice
+    mdm_commands = setup_commands()
+    read_devices()
+
