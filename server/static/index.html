@@ -144,9 +144,9 @@
 
     <script>
     function update(dev_list, last_cmd, last_result, problems){
-
+      console.log("In function update()");
       // Re-populate devices list
-      x = document.getElementById("devices")
+      x = document.getElementById("devices");
 
       if(dev_list.length == x.options.length){
         var is_same = true;
@@ -201,8 +201,8 @@
         else{
           checksum = JSON.stringify(raw);
         }
-
-        //console.log(raw);
+        console.log("*********************");
+        console.log(raw);
         var view = jQuery.parseJSON(raw);
         var template = $('#template').html();
         //console.log(template);
@@ -212,17 +212,15 @@
         //a.html(rendered);        
         $('#accordion').html(rendered);
         // maybe clear accordion?
-        //console.log(rendered);
+        console.log("$$$$$$$$$$$$$$$$$$$$$");
+        console.log(rendered);
 
       $(".btn-xs").click(function(event){
-        console.log("here");
+        // Get device UDID and command UUID
         var udid = $(this).closest(".panel").attr("id");
         var uuid = $(this).attr("id");
-        console.log(udid);
-        console.log(uuid);
-        //$("#modal_body").html(udid);
 
-        // Call /response with UDID and command UUID
+        // Access /response with to get the response string
         $.post("/response", JSON.stringify({"UDID":udid, "UUID":uuid}), function(data){
           $("#modal_body").html(data);
         });

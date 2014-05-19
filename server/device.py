@@ -3,32 +3,33 @@ from plistlib import *
 from operator import itemgetter
 
 class device:
-    IP = '0.0.0.0'
-    pushMagic = ''
-    deviceToken = ''
-    unlockToken = ''
-    UDID = ''
-    name = ''
-    model = ''
-    OS = ''
+    # Listing of class variables instantiated in __init__
+    #IP = '0.0.0.0'
+    #pushMagic = ''
+    #deviceToken = ''
+    #unlockToken = ''
+    #UDID = ''
+    #name = ''
+    #model = ''
+    #OS = ''
 
-    cmdList = {} # Dictionary to hold commands and responses that HAVE been sent
+    #cmdList = {} # Dictionary to hold commands and responses that HAVE been sent
                  # Keys are Command UUID, value is an array [command, response]
                  # Possibly change to {'command', 'response', 'result', 'order'}
 
     # Possible additional parameters
     # Note that adding parameters will void pickle list and may require device reregistration
-    GEO = ''   # Geographical coordinates - x,y or degrees, hours, minutes?
-    owner = '' # Assigned owner
-    location = '' # Assigned location
-    status = 0 # 0=ready for command (green? gray?)
+    #GEO = ''   # Geographical coordinates - x,y or degrees, hours, minutes?
+    #owner = '' # Assigned owner
+    #location = '' # Assigned location
+    #status = 0 # 0=ready for command (green? gray?)
                # 1=command in queue (yellow)
                # 2=error/timeout (red)
                # maybe have green (last command successful?)
     #availableCapacity = 0
     #totalCapacity = 0
     #installedApps = []
-    queue = deque() # Queue to hold commands that HAVE NOT been sent
+    #queue = deque() # Queue to hold commands that HAVE NOT been sent
 
 
     def __init__(self, newUDID, tuple):
@@ -41,6 +42,12 @@ class device:
         self.owner = 'John Snow'
         self.location = 'Winterfell'
         self.status = 0
+        self.name = ''
+        self.model = ''
+        self.OS = ''
+
+        self.cmdList = {}
+        self.queue = deque()
 
 
     def getUDID(self):
@@ -88,14 +95,10 @@ class device:
     def addCommand(self, cmd):
         # Add a new command to the queue
 
-        #print "@@*********************@@"
-        #print cmd
-
         # Update command with unlockToken if necessary
         if cmd['Command']['RequestType'] == 'ClearPasscode':
             cmd['Command']['UnlockToken'] = Data(self.unlockToken)
 
-        #print cmd
         print "ADDED COMMAND TO QUEUE:", cmd['CommandUUID']
         self.queue.append(cmd)
 

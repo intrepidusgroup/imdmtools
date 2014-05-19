@@ -398,7 +398,9 @@ class do_mdm:
                 print "DeviceInformation should update here..."
                 p = pl['QueryResponses']
                 device_list[pl['UDID']].updateInfo(p['DeviceName'], p['ModelName'], p['OSVersion'])
-                store_devices()
+
+            # Update pickle file with new response
+            store_devices()
         else:
             rd = dict()
             if pl.get('MessageType') == 'Authenticate':
@@ -447,8 +449,12 @@ class get_commands:
         return json.dumps(drop_list)
 
 def update():
-    # Function to update displays on the frontend
-    # Sends back dictionary of devices, last command, last result, problems
+
+    # DEPRICATED
+    # Current polling endpoint is /devices
+    # May be updated later on for intelligent updating of devices
+
+    # Function to update devices on the frontend
     # Is called on page load and polling
 
     # TODO: Change last_result/sent to access device_list - need UDID from server?
@@ -471,6 +477,12 @@ def update():
 
 class poll:
     def POST(self):
+
+    # DEPRICATED
+    # Current polling endpoint is /devices
+    # May be updated later on for intelligent updating of devices
+
+
         # Polling function to update page with new data
         return update()
 
@@ -479,13 +491,9 @@ class get_response:
         # Endpoint to return a reponse given a UDID and command UUID
         global device_list
         
-        #i = web.data()
         i = json.loads(web.data())
-        print "************"
-        print i
 
         return device_list[i['UDID']].getResponse(i['UUID'])
-
 
 class dev_tab:
     def POST(self):
@@ -503,6 +511,7 @@ class dev_tab:
 
         # return JSON
         return json.dumps(out)
+        #return json.dumps({'devices':devices})
 
 def store_devices():
     # Function to convert the device list and write to a file
