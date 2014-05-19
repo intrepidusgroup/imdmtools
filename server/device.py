@@ -3,50 +3,38 @@ from plistlib import *
 from operator import itemgetter
 
 class device:
-    # Listing of class variables instantiated in __init__
-    #IP = '0.0.0.0'
-    #pushMagic = ''
-    #deviceToken = ''
-    #unlockToken = ''
-    #UDID = ''
-    #name = ''
-    #model = ''
-    #OS = ''
-
-    #cmdList = {} # Dictionary to hold commands and responses that HAVE been sent
-                 # Keys are Command UUID, value is an array [command, response]
-                 # Possibly change to {'command', 'response', 'result', 'order'}
-
-    # Possible additional parameters
-    # Note that adding parameters will void pickle list and may require device reregistration
-    #GEO = ''   # Geographical coordinates - x,y or degrees, hours, minutes?
-    #owner = '' # Assigned owner
-    #location = '' # Assigned location
-    #status = 0 # 0=ready for command (green? gray?)
-               # 1=command in queue (yellow)
-               # 2=error/timeout (red)
-               # maybe have green (last command successful?)
-    #availableCapacity = 0
-    #totalCapacity = 0
-    #installedApps = []
-    #queue = deque() # Queue to hold commands that HAVE NOT been sent
-
-
     def __init__(self, newUDID, tuple):
         self.UDID = newUDID
         self.IP = tuple[0]
         self.pushMagic = tuple[1]
         self.deviceToken = tuple[2]
         self.unlockToken = tuple[3]
+
+        # Hard coded information to show possible feature
         self.GEO = "42*21'29''N 71*03'49''W"
         self.owner = 'John Snow'
         self.location = 'Winterfell'
-        self.status = 0
+        self.status = 0# 0=ready for command (green? gray?)
+                       # 1=command in queue (yellow)
+                       # 2=error/timeout (red)
+                       # maybe have green (last command successful?)
+
+
+        # Possible additional parameters
+        #self.availableCapacity
+        #self.totalCapacity
+        #self.installedApps
+
         self.name = ''
         self.model = ''
         self.OS = ''
 
+        # Dictionary to hold commands and responses that HAVE been sent
+        # Keys are Command UUID, value is an array [command, response]
+        # Possibly change to {'command', 'response', 'result', 'order'}
         self.cmdList = {}
+
+        # Queue to hold commands that HAVE NOT been sent
         self.queue = deque()
 
 
@@ -105,7 +93,7 @@ class device:
     def sendCommand(self):
         # Pop command off queue to be sent to the device
         if len(self.queue) == 0:
-            print "**ERROR: Attempting to fetch command, but no command in queue"
+            print "**Attempting to fetch command, but no command in queue"
             return ''
 
         cmd = self.queue.popleft()
@@ -125,40 +113,3 @@ class device:
         self.cmdList[cmdUUID]['response'] = response
         # Check response to see if error? if so, status=3
         self.cmdList[cmdUUID]['status'] = 'success'
-
-
-    def output(self):
-        # DEPRICATED - pickle module takes care of this
-        # Convert data into a dictionary for persistence storage
-        d = dict()
-        d['IP'] = self.IP
-        d['pushMagic'] = self.pushMagic
-        d['deviceToken'] = self.deviceToken
-        d['unlockToken'] = self.unlockToken
-        d['UDID'] = self.UDID
-        d['name'] = self.name
-        d['model'] = self.model
-        d['OS'] = self.OS
-
-        # May need to rework queue since its a type deque
-        d['queue'] = self.queue
-        d['cmdList'] = self.cmdList
-
-        return d
-
-    def print_device(self):
-        # Debug fuction to print the contents of the device
-        # Should not be used with a live server due to sensitive token data
-        print "****************"
-        print "Device name:", self.name
-        print "Device ID:", self.UDID
-        print "IP:", self.IP
-        print "Model:", self.model
-        print "OS: iOS", self.OS
-        print "Push magic token:", self.pushMagic
-        print "Device token:", self.deviceToken
-        # Contains lots of escape sequences and messes with printing
-        #print "Unlock token:", self.unlockToken
-        print self.queue
-        print self.cmdList
-        print "****************"

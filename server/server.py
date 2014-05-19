@@ -3,7 +3,6 @@ import cPickle as pickle
 from device import device # Custom device class
 from plistlib import *
 from APNSWrapper import *
-from creds import *
 from problems import *
 from datetime import datetime
 from subprocess import call
@@ -110,7 +109,6 @@ urls = (
     '/getcommands', 'get_commands',
     '/devices', 'dev_tab',
     '/response', 'get_response',
-    '/debug', 'debug',
 )
 
 
@@ -292,8 +290,7 @@ class root:
         return web.redirect("/static/index.html")
 
 def queue(cmd, dev_UDID):
-    # Function to add a command to a device's queue
-
+    # Function to add a command to a device queue
     global device_list, mdm_commands
 
     mylocal_PushMagic, mylocal_DeviceToken = device_list[dev_UDID].getQueueInfo()
@@ -311,7 +308,7 @@ def queue(cmd, dev_UDID):
     store_devices()
 
 
-    # Send command to Apple
+    # Send request to Apple
     wrapper = APNSNotificationWrapper('PushCert.pem', False)
     message = APNSNotification()
     message.token(mylocal_DeviceToken)
@@ -332,9 +329,10 @@ class queue_cmd_post:
         for UDID in dev:
             queue(cmd, UDID)
 
-	    # Update page
-        return update()
-	
+	    # Update page - currently not using update()
+        #return update()
+	    return
+
 class do_mdm:        
     def PUT(self):
         global sm_obj, device_list
@@ -350,10 +348,6 @@ class do_mdm:
             cooked_sig = '\n'.join(raw_sig[pos:pos+76] for pos in xrange(0, len(raw_sig), 76))
 
             signature = '\n-----BEGIN PKCS7-----\n%s\n-----END PKCS7-----\n' % cooked_sig
-
-
-            #print i
-            #print signature
 
             # Verify client signature - necessary?
             buf = BIO.MemoryBuffer(signature)
@@ -371,7 +365,7 @@ class do_mdm:
         if pl.get('Status') == 'Idle':
             print HIGH + "Idle Status" + NORMAL
             
-            print "*FETCHING COMMAND TO BE SENT FROM DEV:", pl['UDID']
+            print "*FETCHING CMD TO BE SENT FROM DEVICE:", pl['UDID']
             rd = device_list[pl['UDID']].sendCommand()
 
             # If no commands in queue, return empty string to avoid infinite idle loop
@@ -417,6 +411,7 @@ class do_mdm:
         #print LOW, out, NORMAL
 
         # This is used only for safe printing
+        # Currently not implemented
         q = pl.get('QueryResponses')
 
         return out
@@ -505,7 +500,6 @@ class dev_tab:
             #return json.dumps(device_list[key].populate())
             devices.append(device_list[key].populate())
 
-
         out = {}
         out['devices'] = devices
 
@@ -519,7 +513,7 @@ def store_devices():
 
     print "STORING DEVICES..."
     
-    # Pickle
+    # Use pickle to store list of devices
     pickle.dump(device_list, file('devicelist.pickle', 'w'))
 
 def read_devices():
@@ -584,6 +578,8 @@ class enroll_profile:
             raise web.notfound()
 
 class do_problem:
+    # DEBUG
+    # DEPRICATED???
     def GET(self):
         global problems
         problem_detect = ' ('
@@ -642,13 +638,6 @@ class app_ipa:
             return open('MyApp.ipa', "rb").read()
         else:
             return web.ok
-
-class debug:
-    def GET(self):
-        # Function to allow for on demand debug printing
-        global device_list
-        for dev in device_list:
-            device_list[dev].print_device()
 
 
 def log_data(out):
