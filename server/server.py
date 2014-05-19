@@ -36,7 +36,10 @@ from M2Crypto import SMIME, X509, BIO
 #                  - Supports reporting problems
 # * April 2014     - Support for new front end
 #                  - Tweaks and bug fixes
-
+# * May 2014       - New device class
+#                  - Rework server to use device class
+#                  - Fixes a number of problems with using multiple devices
+#                  - Support for new device-based front end
 
 
 # Global variable setup
