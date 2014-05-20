@@ -144,7 +144,7 @@
 
     <script>
     function update(dev_list, last_cmd, last_result, problems){
-      console.log("In function update()");
+      //console.log("In function update()");
       // Re-populate devices list
       x = document.getElementById("devices");
 
@@ -189,6 +189,7 @@
       }
     }
 
+    // Global variable to avoid changing device list if there are no changes to it
     var checksum = ''
 
     function populate_devices(){
@@ -201,19 +202,11 @@
         else{
           checksum = JSON.stringify(raw);
         }
-        console.log("*********************");
-        console.log(raw);
         var view = jQuery.parseJSON(raw);
         var template = $('#template').html();
-        //console.log(template);
-        //a = document.getElementByID("accordion");
         var rendered = Mustache.render(template, view);
 
-        //a.html(rendered);        
         $('#accordion').html(rendered);
-        // maybe clear accordion?
-        console.log("$$$$$$$$$$$$$$$$$$$$$");
-        console.log(rendered);
 
       $(".btn-xs").click(function(event){
         // Get device UDID and command UUID
@@ -264,13 +257,10 @@
 
     $(document).ready(function(){
       // Initial setup and start polling
-      //poll()
       update_cmds()
-      //setInterval(poll,3000);
 
-      //testing...
+      // Temporary version of "update()" until scalable solution found
       populate_devices();
-
       setInterval(populate_devices, 3000);
 
       // Check for device-specific content and enable if applicable
