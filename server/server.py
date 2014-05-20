@@ -1,10 +1,10 @@
-import web, os, pprint, json, uuid, sys, re
+import web, os, json, uuid, sys
+import cPickle as pickle
+from device import device # Custom device class
 from plistlib import *
 from APNSWrapper import *
-from creds import *
 from problems import *
 from datetime import datetime
-
 # needed to handle verification of signed messages from devices
 from M2Crypto import SMIME, X509, BIO
 
@@ -32,21 +32,27 @@ from M2Crypto import SMIME, X509, BIO
 # * January 2012   - Added support for some iOS 5 functions. ShmooCon 8.
 # * February 2012  - Can now verify signed messages from devices
 #                  - Tweaks to CherryPy startup to avoid errors on console  
-# * January 214    - Support for multiple enrollments
+# * January 2014   - Support for multiple enrollments
 #                  - Supports reporting problems
+# * April 2014     - Support for new front end
+#                  - Tweaks and bug fixes
+# * May 2014       - New device class
+#                  - Rework server to use device class
+#                  - Fixes a number of problems with using multiple devices
+#                  - Support for new device-based front end
 
+
+# Global variable setup
 LOGFILE = 'xactn.log'
 
 # Dummy socket to get the hostname
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-s.connect(('google.com', 0))
+s.connect(('8.8.8.8', 0))
 
 # NOTE: Will need to overwrite this if behind a firewall
 MY_ADDR = s.getsockname()[0] + ":8080"
 
-# 
-# set up some smime objects to verify signed messages coming from devices
-#
+# Set up some smime objects to verify signed messages coming from devices
 sm_obj = SMIME.SMIME()
 x509 = X509.load_cert('identity.crt')
 sk = X509.X509_Stack()
@@ -65,20 +71,31 @@ sm_obj.set_x509_store(st)
 my_test_provisioning_uuid = 'REPLACE-ME-WITH-REAL-UUIDSTRING'
 
 from web.wsgiserver import CherryPyWSGIServer
-from web.wsgiserver.ssl_builtin import BuiltinSSLAdapter
 
-CherryPyWSGIServer.ssl_adapter = BuiltinSSLAdapter('Server.crt', 'Server.key', None)
+# Python 2.7 requires the PyOpenSSL library
+# Python 3.x should use be able to use the default python SSL
+try:
+    from OpenSSL import SSL 
+    from OpenSSL import crypto 
+except ImportError: 
+    SSL = None 
+
+
+CherryPyWSGIServer.ssl_certificate = "Server.crt"
+CherryPyWSGIServer.ssl_private_key = "Server.key"
 
 ###########################################################################
 
 last_result = ''
 last_sent = ''
 
+device_list = dict()
+
 global mdm_commands
 
 urls = (
     '/', 'root',
-    '/queue', 'queue_cmd',
+    '/queue', 'queue_cmd_post',
     '/checkin', 'do_mdm',
     '/server', 'do_mdm',
     '/ServerURL', 'do_mdm',
@@ -90,12 +107,16 @@ urls = (
     '/app', 'app_ipa',
     '/problem', 'do_problem',
     '/problemjb', 'do_problem',
-    '/resetp', 'do_resetp',
+    '/poll', 'poll',
+    '/getcommands', 'get_commands',
+    '/devices', 'dev_tab',
+    '/response', 'get_response',
 )
 
 
 
 def setup_commands():
+    # Function to generate dictionary of valid commands
     global my_test_provisioning_uuid
 
     ret_list = dict()
@@ -129,12 +150,10 @@ def setup_commands():
                 'Model', 'ModelName', 'ModemFirmwareVersion', 'OSVersion', 
                 'PhoneNumber', 'Product', 'ProductName', 'SIMCarrierNetwork', 
                 'SIMMCC', 'SIMMNC', 'SerialNumber', 'UDID', 'WiFiMAC', 'UDID',
-                'UnlockToken',
-
-    		'MEID', 'CellularTechnology', 'BatteryLevel', 
-		    'SubscriberCarrierNetwork', 'VoiceRoamingEnabled', 
-		    'SubscriberMCC', 'SubscriberMNC', 'DataRoaming', 'VoiceRomaing',
-            'JailbreakDetected'
+                'UnlockToken', 'MEID', 'CellularTechnology', 'BatteryLevel', 
+		        'SubscriberCarrierNetwork', 'VoiceRoamingEnabled', 
+		        'SubscriberMCC', 'SubscriberMNC', 'DataRoaming', 'VoiceRoaming',
+                'JailbreakDetected'
             ]
         )
     )
@@ -142,6 +161,7 @@ def setup_commands():
     ret_list['ClearPasscode'] = dict(
         Command = dict(
             RequestType = 'ClearPasscode',
+            # When ClearPasscode is used, the device specific unlock token needs to be added
             # UnlockToken = Data(my_UnlockToken)
         )
     )
@@ -190,7 +210,7 @@ def setup_commands():
         ret_list['RemoveProvisioningProfile'] = dict(
             Command = dict(
                 RequestType = 'RemoveProvisioningProfile',
-        # need an ASN.1 parser to snarf the UUID out of the signed profile
+                # need an ASN.1 parser to snarf the UUID out of the signed profile
                 UUID = my_test_provisioning_uuid
             )
         )
@@ -199,7 +219,7 @@ def setup_commands():
         print "Can't find MyApp.mobileprovision in current directory."
 
 #
-# new for iOS 5:
+# iOS 5:
 #
     ret_list['InstallApplication'] = dict(
     Command = dict(
@@ -267,52 +287,60 @@ def setup_commands():
 
     return ret_list
 
-
 class root:
     def GET(self):
-        return home_page()
+        return web.redirect("/static/index.html")
+
+def queue(cmd, dev_UDID):
+    # Function to add a command to a device queue
+    global device_list, mdm_commands
+
+    mylocal_PushMagic, mylocal_DeviceToken = device_list[dev_UDID].getQueueInfo()
+
+    cmd_data = mdm_commands[cmd]
+    cmd_data['CommandUUID'] = str(uuid.uuid4())
+
+    # Have to search through device_list using pushmagic or devtoken to get UDID
+    for key in device_list:
+        if device_list[key].deviceToken == mylocal_DeviceToken:
+            device_list[key].addCommand(cmd_data)
+            print "*Adding CMD:", cmd_data['CommandUUID'], "to device:", key
+            break
+
+    store_devices()
+
+
+    # Send request to Apple
+    wrapper = APNSNotificationWrapper('PushCert.pem', False)
+    message = APNSNotification()
+    message.token(mylocal_DeviceToken)
+    message.appendProperty(APNSProperty('mdm', mylocal_PushMagic))
+    wrapper.append(message)
+    wrapper.notify()
+
+    
+
+class queue_cmd_post:
+    def POST(self):
+        global device_list
         
-class queue_cmd:
-    def GET(self):
-        global current_command, last_sent
-        global devList
+        i = json.loads(web.data())
+        cmd = i.pop("cmd", [])
+        dev = i.pop("dev[]", [])
 
-        devListPrime = []
-        i = web.input(device=[])
-        for dev in i.device:
-            creds = dev.split(' -- ')
-            for devP in devList:
-                if creds[0] == devP[1]:
-                    devListPrime.append(devP)
+        for UDID in dev:
+            queue(cmd, UDID)
 
-        for dev_creds in devListPrime:
-            mylocal_PushMagic = dev_creds[1]
-            mylocal_DeviceToken = dev_creds[2]
-
-            cmd = i.command
-            cmd_data = mdm_commands[cmd]
-            cmd_data['CommandUUID'] = str(uuid.uuid4())
-            current_command = cmd_data
-            last_sent = pprint.pformat(current_command)
-
-            wrapper = APNSNotificationWrapper('PushCert.pem', False)
-            message = APNSNotification()
-            message.token(mylocal_DeviceToken)
-            message.appendProperty(APNSProperty('mdm', mylocal_PushMagic))
-            wrapper.append(message)
-            wrapper.notify()
-
-        return home_page()
-
-
+	    # Update page - currently not using update()
+        #return update()
+	    return
 
 class do_mdm:        
-    global last_result, sm_obj
     def PUT(self):
-        global current_command, last_result
+        global sm_obj, device_list
         HIGH='[1;31m'
         LOW='[0;32m'
-        NORMAL='[0;30m'
+        NORMAL='[0;39m'
 
         i = web.data()
         pl = readPlistFromString(i)
@@ -320,17 +348,10 @@ class do_mdm:
         if 'HTTP_MDM_SIGNATURE' in web.ctx.environ:
             raw_sig = web.ctx.environ['HTTP_MDM_SIGNATURE']
             cooked_sig = '\n'.join(raw_sig[pos:pos+76] for pos in xrange(0, len(raw_sig), 76))
-    
-            signature = """
------BEGIN PKCS7-----
-%s
------END PKCS7-----
-""" % cooked_sig
 
+            signature = '\n-----BEGIN PKCS7-----\n%s\n-----END PKCS7-----\n' % cooked_sig
 
-            #print i
-            #print signature
-
+            # Verify client signature - necessary?
             buf = BIO.MemoryBuffer(signature)
             p7 = SMIME.load_pkcs7_bio(buf)
             data_bio = BIO.MemoryBuffer(i)
@@ -345,9 +366,15 @@ class do_mdm:
 
         if pl.get('Status') == 'Idle':
             print HIGH + "Idle Status" + NORMAL
-            rd = current_command
+            
+            print "*FETCHING CMD TO BE SENT FROM DEVICE:", pl['UDID']
+            rd = device_list[pl['UDID']].sendCommand()
+
+            # If no commands in queue, return empty string to avoid infinite idle loop
+            if(not rd):
+                return ''
+
             print "%sSent: %s%s" % (HIGH, rd['Command']['RequestType'], NORMAL)
-#            print HIGH, rd, NORMAL
 
         elif pl.get('MessageType') == 'TokenUpdate':
             print HIGH+"Token Update"+NORMAL
@@ -357,7 +384,19 @@ class do_mdm:
         elif pl.get('Status') == 'Acknowledged':
             print HIGH+"Acknowledged"+NORMAL
             rd = dict()
+            # A command has returned a response
+            # Add the response to the given device
+            print "*CALLING ADD RESPONSE TO CMD:", pl['CommandUUID']
+            device_list[pl['UDID']].addResponse(pl['CommandUUID'], pl)
 
+            # If we grab device information, we should also update the device info
+            if pl.get('QueryResponses'):
+                print "DeviceInformation should update here..."
+                p = pl['QueryResponses']
+                device_list[pl['UDID']].updateInfo(p['DeviceName'], p['ModelName'], p['OSVersion'])
+
+            # Update pickle file with new response
+            store_devices()
         else:
             rd = dict()
             if pl.get('MessageType') == 'Authenticate':
@@ -371,11 +410,17 @@ class do_mdm:
         log_data(rd)
 
         out = writePlistToString(rd)
-#        print LOW, out, NORMAL
+        #print LOW, out, NORMAL
 
+        # This is used only for safe printing
+        # Currently not implemented
         q = pl.get('QueryResponses')
-        last_result = pprint.pformat(pl)
+
         return out
+
+# Code for safer information output
+# Hides important unique identifiers
+# See original MDM code for proper placement
 '''
         if q:
             redact_list = ('UDID', 'BluetoothMAC', 'SerialNumber', 'WiFiMAC',
@@ -389,90 +434,143 @@ class do_mdm:
 '''
 
 
-def home_page():
-    global mdm_commands, last_result, last_sent, problems, current_command
-    global devList
+class get_commands:
+    def POST(self):
+        # Function to return static list of commands to the front page
+        # Should be called once by document.ready
+        global mdm_commands
 
-    drop_list = ''
-    for key in sorted(mdm_commands.iterkeys()):
-        if current_command['Command']['RequestType'] == key:
-            selected = 'selected'
-        else:
-            selected = ''
-        drop_list += '<option value="%s" %s>%s</option>\n'%(key,selected,key)
+        drop_list = []
+        for key in sorted(mdm_commands.iterkeys()):
+            drop_list.append([key, key])    
+        return json.dumps(drop_list)
 
-    dev_drop_list = ''
-    for dev_creds in devList:
-        dev = dev_creds[1] + ' -- ' + dev_creds[0]
-        dev_drop_list += '<option value="%s" >%s</option>\n'%(dev,dev)
+def update():
 
-    enrollCommands = ""
-    agentStr = web.ctx.env['HTTP_USER_AGENT']
-    print agentStr
-    if ("(iPhone;" in agentStr) or ("(iPad;" in agentStr):
-        enrollCommands="""<td align="center">Tap <a href='/enroll'>here</a> to <br/>enroll in MDM</td>
-            <td align="right">Tap <a href='/ca'>here</a> to install the <br/> CA Cert (for Server/Identity)</td>"""
-    out = """
-<html><head><title>MDM Test Console</title></head><body>
-<table border='0' width='100%%'><tr><td>
-<form method="GET" action="/queue">
-  <tr>%s</tr>
-  <tr><td>
-  <select name="command">
-  <option value=''>Select command</option>
-%s
-  </select>
-  <input type=submit value="Send"/>
-  <hr/>
-  Select Device:<BR/>
-  <select name="device" multiple="multiple">
-%s
-  </select>
-  <input type=submit value="Send"/>
-</form></td></tr></table>
-<hr/>
-<b>Last command sent</b>
-<pre>%s</pre>
-<hr/>
-<b>Last result</b> (<a href="/">Refresh</a>)
-<pre>%s</pre>
-<hr/>
-<b>Problems Detected: </b> 
-<pre>%s</pre>
-</body></html>
-""" % (enrollCommands, drop_list, dev_drop_list, last_sent, last_result, "\n".join(problems))
+    # DEPRICATED
+    # Current polling endpoint is /devices
+    # May be updated later on for intelligent updating of devices
 
-    return out
+    # Function to update devices on the frontend
+    # Is called on page load and polling
+
+    # TODO: Change last_result/sent to access device_list - need UDID from server?
+    # This front page update should use name and IP (maybe token)?
+
+    global problems, device_list
+    
+    # Create list of devices
+    dev_list_out = []
+    for UDID in device_list:
+        dev_list_out.append([device_list[UDID].IP, device_list[UDID].pushMagic])
+    
+    # Format output as a dict and then return as JSON
+    out = dict()
+    out['dev_list'] = dev_list_out
+    out['problems'] = '<br>'.join(problems)
+
+    return json.dumps(out)
+
+
+class poll:
+    def POST(self):
+
+    # DEPRICATED
+    # Current polling endpoint is /devices
+    # May be updated later on for intelligent updating of devices
+
+
+        # Polling function to update page with new data
+        return update()
+
+class get_response:
+    def POST(self):
+        # Endpoint to return a reponse given a UDID and command UUID
+        global device_list
+        
+        i = json.loads(web.data())
+
+        return device_list[i['UDID']].getResponse(i['UUID'])
+
+class dev_tab:
+    def POST(self):
+        # Endpoint to return list of devices with a list of device info
+        global device_list
+        devices = []
+
+        for key in device_list:
+            #return json.dumps(device_list[key].populate())
+            devices.append(device_list[key].populate())
+
+        out = {}
+        out['devices'] = devices
+
+        # return JSON
+        return json.dumps(out)
+        #return json.dumps({'devices':devices})
+
+def store_devices():
+    # Function to convert the device list and write to a file
+    global device_list
+
+    print "STORING DEVICES..."
+    
+    # Use pickle to store list of devices
+    pickle.dump(device_list, file('devicelist.pickle', 'w'))
+
+def read_devices():
+    # Function to open and read the device list
+    # Is called when the server loads
+    global device_list
+
+    # TODO: Add check to create devicelist.pickle if doesnt exist
+    try:
+        device_list = pickle.load(file('devicelist.pickle'))
+        print "LOADED PICKLE"
+    except:
+        print "NO DATA IN PICKLE FILE or PICKLE FILE DOES NOT EXIST"
+        # Creating new pickle file if need be
+        open('devicelist.pickle', 'a').close()
 
 
 def do_TokenUpdate(pl):
-    global my_PushMagic, my_DeviceToken, my_UnlockToken, mdm_commands
+    global mdm_commands
 
     my_PushMagic = pl['PushMagic']
     my_DeviceToken = pl['Token'].data
     my_UnlockToken = pl['UnlockToken'].data
 
-    mdm_commands['ClearPasscode'] = dict(
-        Command = dict(
-            RequestType = 'ClearPasscode',
-            UnlockToken = Data(my_UnlockToken)
-        )
-    )
-    newTuple = (web.ctx.ip, my_PushMagic, repr(my_DeviceToken), repr(my_UnlockToken))
-    devList.append(newTuple)
-    # devList = set(devList)
-    out = "devList = %s" % devList
+    newTuple = (web.ctx.ip, my_PushMagic, my_DeviceToken, my_UnlockToken)
 
-    fd = open('creds.py', 'w')
-    fd.write(out)
-    fd.close()
-    
 
+    print "NEW DEVICE UDID:", pl.get('UDID')
+    # A new device has enrolled, add a new device
+    if pl.get('UDID') not in device_list:
+        print "ADDING DEVICE TO DEVICE_LIST"
+        # Device does not already exist, create new instance of device
+
+        device_list[pl.get('UDID')] = device(pl['UDID'], newTuple)
+        #device_list[pl.get('UDID')] = device(UDID=pl['UDID'], tuple=newTuple)
+
+    else:
+        # Device exists, update information - token stays the same
+        device_list[pl['UDID']].reenroll(web.ctx.ip, my_PushMagic, my_UnlockToken)
+        print "DEVICE ALREADY EXISTS, UPDATE INFORMATION"
+
+
+    # Queue a DeviceInformation command to populate fields in device_list
+    queue('DeviceInformation', pl['UDID'])
+
+    # Store devices in a file for persistence
+    store_devices()
+
+    # Why return empty dictionary?
     return dict()
 
 
 class enroll_profile:
     def GET(self):
+	# Enroll an iPad/iPhone/iPod when requested
         if 'Enroll.mobileconfig' in os.listdir('.'):
             web.header('Content-Type', 'application/x-apple-aspen-config;charset=utf-8')
             web.header('Content-Disposition', 'attachment;filename="Enroll.mobileconfig"')
@@ -481,6 +579,8 @@ class enroll_profile:
             raise web.notfound()
 
 class do_problem:
+    # DEBUG
+    # DEPRICATED???
     def GET(self):
         global problems
         problem_detect = ' ('
@@ -492,16 +592,10 @@ class do_problem:
         problem_detect += web.ctx.ip
 
         problems.insert(0, problem_detect)
-        out = """
-problems = %s""" % problems
+        out = "\nproblems = %s" % problems
         fd = open('problems.py', 'w')
         fd.write(out)
         fd.close()
-
-class do_resetp:
-    def GET(self):
-        global problems
-        problems=[]
 
 class mdm_ca:
     def GET(self):
@@ -516,11 +610,12 @@ class mdm_ca:
 
 class favicon:
     def GET(self):
-
         if 'favicon.ico' in os.listdir('.'):
             web.header('Content-Type', 'image/x-icon;charset=utf-8')
-#            web.header('Content-Disposition', 'attachment;filename="favicon.ico"')
             return open('favicon.ico', "rb").read()
+        elif 'favicon.ico' in os.listdir('./static/'):
+            web.header('Content-Type', 'image/x-icon;charset=utf-8')
+            return open('/static/favicon.ico', "rb").read()
         else:
             raise web.notfound()
 
@@ -543,12 +638,8 @@ class app_ipa:
             web.header('Content-Disposition', 'attachment;filename="MyApp.ipa"')
             return open('MyApp.ipa', "rb").read()
         else:
-            raise web.notfound()
+            return web.ok
 
-
-
-mdm_commands = setup_commands()
-current_command = mdm_commands['DeviceLock']
 
 def log_data(out):
     fd = open(LOGFILE, "a")
@@ -556,12 +647,20 @@ def log_data(out):
     fd.write(" %s\n" % repr(out))
     fd.close()
 
+
 if __name__ == "__main__":
     print "Starting Server" 
     app = web.application(urls, globals())
     app.internalerror = web.debugerror
-    app.run()
+
     try:
         app.run()
     except:
-        os._exit(0)
+        sys.exit(0)
+else:
+    # app.run() seems to use server.py as a module
+    # Placing these in main causes them not to run
+    # Placing these above main causes them to run twice
+    mdm_commands = setup_commands()
+    read_devices()
+

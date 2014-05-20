@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="MDM Server Control">
+    <meta name="author" content="Rory Thrasher">
+    <link rel="shortcut icon" href="../../assets/ico/favicon.ico">
+
+    <title>Open Source MDM Server</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="./dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="./starter-template.css" rel="stylesheet">
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+
+
+  <div class="container">    
+      <div id="showEnroll" style="display:none" class="row col-sm-6" align="center">Tap <a href='/enroll'>here</a> to <br/>enroll in MDM</div>
+      <div id="showCert" style="display:none" class="row col-sm-6" align="center">Tap <a href='/ca'>here</a> to install the <br/> CA Cert (for Server/Identity)</div>
+
+      <div class="starter-template">
+        <h1>Open Source Mobile Device Management Server</h1>
+        <p class="lead">Choose a command to send to one or more enrolled devices.</p>
+      </div>
+
+
+      <div class="row">
+        <div class="col-md-4 text-center">
+          <br>
+          <select class="form-control" id="commands" name="command">
+            <span class="col-md-4"></span>
+            <option value=''>Select command</option>
+            </select>
+        </div><!-- /.col-md-4 -->
+
+        <!--Hidden dropdown will goes here-->
+        <div class="col-md-4 text-center">
+
+        </div><!-- /.col-md-4 -->
+
+
+        <div class="col-md-4 text-center">
+          <br>
+          <input class="btn btn-large btn-primary" id="submit1" type="submit"/>
+        </div><!-- /.col-md-4 -->
+      </div><!-- /.row -->
+
+      <br><br><br>
+
+      <div class="panel-group" id="accordion">
+      </div>
+
+
+<!-- Modal -->
+<div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="myModalLabel">Response:</h4>
+      </div>
+      <div class="modal-body" id="modal_body">
+        ...
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+    </div><!-- /.container -->
+
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>-->
+    <script src="jquery-1.11.0.min.js"></script>
+    <script src="./dist/js/bootstrap.min.js"></script>
+    <!--<script src="./dist/js/mustache.js"></script>-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/0.7.2/mustache.min.js"></script>
+    <script id="template" type="x-tmpl-mustache">
+{{#devices}}
+<div class="panel panel-{{status}}" id="{{UDID}}">
+  <div class="panel-heading">
+    <h4 class="panel-title">
+      <div class="col-md-1"><input class="row_box" UDUD="{{UDID}}" type="checkbox" name="box" /></div>
+      <a data-toggle="collapse" data-parent="#accordion" href="#collapse{{UDID}}">
+        <div class="row">
+          <div class="col-md-4">{{name}}</div>
+          <div class="col-md-3">{{owner}}</div>
+          <div class="col-md-3">{{location}}</div>
+
+        </div>
+      </a>
+    </h4>
+  </div>
+  <div class="panel-collapse collapse" id="collapse{{UDID}}">
+    <div class="panel-body">
+      <div class="col-md-1"></div>
+        <div class="col-md-4">UDID: {{UDID}}</div>
+        <div class="col-md-3">IP: {{ip}}</div>
+        <div class="col-md-3"><span class="glyphicon glyphicon-globe"></span> {{geo}}</div>
+      </div>
+
+<table class="table table-condensed">
+<thead>
+<tr>
+<th>Status</th>
+<th>Command</th>
+<th>Options</th>
+</tr>
+</thead>
+<tbody>
+{{#commands}}
+<tr id="command{{cmd.CommandUUID}}">
+<td>*</td>
+<td>{{cmd.Command.RequestType}}</td>
+<td><button type="button" class="btn btn-xs btn-primary" id="{{cmd.CommandUUID}}" data-toggle="modal" data-target="#modal">Response</button></td>
+</tr>
+{{/commands}}
+</tbody>
+</table>
+    </div>
+  </div>
+</div>
+
+{{/devices}}
+</script>
+
+    <script>
+    function update(dev_list, last_cmd, last_result, problems){
+      console.log("In function update()");
+      // Re-populate devices list
+      x = document.getElementById("devices");
+
+      if(dev_list.length == x.options.length){
+        var is_same = true;
+        for(i=0;i<dev_list.length;i++){
+      	  if(dev_list[i][1] != x.options[i].value){
+            is_same = false;
+          }
+        }
+        if(is_same){return;}
+      }
+
+      // This should only be executed if we have changes to device list
+      // Check current devices for selections and update new device list so selections are not lost
+      var isSelected = false;
+      //console.log("Reached need to update devices area");
+      for(j=0;j<dev_list.length;j++){
+        isSelected = false;
+        for(i=0;i<x.options.length;i++){
+          if(x.options[i].selected && x.options[i].value==dev_list[j][1]){
+            isSelected = true;
+            break;
+          }
+        }
+        // Add variables to dev_list to reflect selected
+        // TODO: defaultselected is always false and is optional - remove it while keeping selected
+        if(isSelected){
+          dev_list[j].push(false);
+          dev_list[j].push(true);
+        }
+        else{
+          dev_list[j].push(false);
+          dev_list[j].push(false);
+        }
+      }
+
+      // Populate device list with new data
+      x.options.length = 0;
+      for(i=0;i<dev_list.length;i++){
+        x.options[x.options.length] = new Option(dev_list[i][0], dev_list[i][1], dev_list[i][2], dev_list[i][3]);
+      }
+    }
+
+    var checksum = ''
+
+    function populate_devices(){
+      // Populates device accordion using data from server
+      $.post("/devices", function(raw){
+        
+        if(checksum == JSON.stringify(raw)){
+          return;
+        }
+        else{
+          checksum = JSON.stringify(raw);
+        }
+        console.log("*********************");
+        console.log(raw);
+        var view = jQuery.parseJSON(raw);
+        var template = $('#template').html();
+        //console.log(template);
+        //a = document.getElementByID("accordion");
+        var rendered = Mustache.render(template, view);
+
+        //a.html(rendered);        
+        $('#accordion').html(rendered);
+        // maybe clear accordion?
+        console.log("$$$$$$$$$$$$$$$$$$$$$");
+        console.log(rendered);
+
+      $(".btn-xs").click(function(event){
+        // Get device UDID and command UUID
+        var udid = $(this).closest(".panel").attr("id");
+        var uuid = $(this).attr("id");
+
+        // Access /response with to get the response string
+        $.post("/response", JSON.stringify({"UDID":udid, "UUID":uuid}), function(data){
+          $("#modal_body").html(data);
+        });
+
+
+      });
+
+
+      });
+    }
+
+    function update_cmds(){
+      // Populate command list
+      $.post("/getcommands", function(cmd_list){
+        cmds = JSON.parse(cmd_list);
+        x = document.getElementById("commands");
+        x.options.length = 0
+        x.options[x.options.length] = new Option("Select Command", "", true, false);
+        for(i=0;i<cmds.length;i++){
+          x.options[x.options.length] = new Option(cmds[i][0], cmds[i][1]);
+        }
+      });
+    }
+
+    function poll(){
+      // Polling function to allow for data-driven page
+      $.post("/poll", function(data){
+        data = JSON.parse(data);
+        update(data["dev_list"], data["last_cmd"], data["last_result"], data["problems"]);
+      });
+    }
+
+    function checkDevice(){
+      // Returns true if site is accessed using an iDevice
+      var agent   = navigator.userAgent;
+      if (agent.match(/(iPhone|iPod|iPad)/)){
+        return true;
+      }
+      return false;
+    }
+
+    $(document).ready(function(){
+      // Initial setup and start polling
+      //poll()
+      update_cmds()
+      //setInterval(poll,3000);
+
+      //testing...
+      populate_devices();
+
+      setInterval(populate_devices, 3000);
+
+      // Check for device-specific content and enable if applicable
+      if(checkDevice()){
+        document.getElementById("showEnroll").style.display="block";
+        document.getElementById("showCert").style.display="block";
+      }
+
+      $("#submit1").click(function(event){
+        var checked_devices = [];
+
+        $(".row_box").each(function(){
+          if(this.checked){
+            checked_devices.push($(this).closest(".panel").attr("id"));
+          }
+        });
+
+        // Input checking.
+        if ($("#commands").val()==0){
+          alert("Please choose a command.");
+        }
+        else if (checked_devices.length==0){
+          alert("Please choose one or more devices.");
+        }
+        else{
+          // Send AJAX request
+
+          // Variable to pass all necessary data to server
+          var parameters = {
+            "cmd":$("#commands").val(),
+            "dev[]":checked_devices
+          };
+
+          // Use stringify to fix odd error with passing just parameters
+          $.post("/queue", JSON.stringify(parameters), function(data){
+            data = JSON.parse(data);
+            //update(data["dev_list"], data["last_cmd"], data["last_result"], data["problems"]);
+          });
+        }
+      });
+    });
+    </script>
+
+  </body>
+</html>
