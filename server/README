@@ -35,10 +35,9 @@ network configuration:
 
 [required, included]
 Example.mobileconfig    Sample profile to install (disables certain apps, etc.)
-creds.py                Stores the PushMagic, DeviceToken, and UnlockToken 
-                        after enrollment 
 favicon.ico             Because "favicon.ico not found" in logs annoy me
 server.py               The server itself
+device.py               A device class to support the server
 xactn.log               Log of commands and responses [empty]
 
 certs/make_certs.sh     Script using OpenSSL to create the various certs and
@@ -46,9 +45,9 @@ certs/make_certs.sh     Script using OpenSSL to create the various certs and
 
 [required, need to get from Apple]
 PushCert.pem            Certificate and private key (no passphrase) for APNS
+                        See README in /mdm-server/ for more instructions
 
-
-[required, you need to make]
+[required, you need to make with make_cert.sh]
 CA.crt                  CA certificate used to sign the server cert
                         [load onto device]
 Server.key              Private key (no passphrase) for SSL server
