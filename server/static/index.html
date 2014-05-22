@@ -14,7 +14,7 @@
     <link href="./dist/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- Custom styles for this template -->
-    <link href="./starter-template.css" rel="stylesheet">
+    <link href="./dist/css/site-template.css" rel="stylesheet">
 
     <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
@@ -30,7 +30,7 @@
       <div id="showEnroll" style="display:none" class="row col-sm-6" align="center">Tap <a href='/enroll'>here</a> to <br/>enroll in MDM</div>
       <div id="showCert" style="display:none" class="row col-sm-6" align="center">Tap <a href='/ca'>here</a> to install the <br/> CA Cert (for Server/Identity)</div>
 
-      <div class="starter-template">
+      <div class="site-template">
         <h1>Open Source Mobile Device Management Server</h1>
         <p class="lead">Choose a command to send to one or more enrolled devices.</p>
       </div>
@@ -260,7 +260,7 @@
 
       // Temporary version of "update()" until scalable solution found
       populate_devices();
-      setInterval(populate_devices, 500);
+      setInterval(populate_devices, 2000);
 
       // Check for device-specific content and enable if applicable
       if(checkDevice()){
