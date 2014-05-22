@@ -403,6 +403,9 @@ class do_mdm:
                 print HIGH+"Authenticate"+NORMAL
             elif pl.get('MessageType') == 'CheckOut':
                 print HIGH+"Device leaving MDM"+ NORMAL
+            elif pl.get('Status') == 'Error':
+                print "*CALLING ADD RESPONSE WITH ERROR TO CMD:", pl['CommandUUID']
+                device_list[pl['UDID']].addResponse(pl['CommandUUID'], pl)
             else:
                 print HIGH+"(other)"+NORMAL
                 print HIGH, pl, NORMAL

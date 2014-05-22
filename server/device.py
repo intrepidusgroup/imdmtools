@@ -30,8 +30,8 @@ class device:
         self.OS = ''
 
         # Dictionary to hold commands and responses that HAVE been sent
-        # Keys are Command UUID, value is an array [command, response]
-        # Possibly change to {'command', 'response', 'result', 'order'}
+        # Keys are Command UUID, value is a dictionary
+        # {'command', 'response', 'result', 'order', 'status'}
         self.cmdList = {}
 
         # Queue to hold commands that HAVE NOT been sent
@@ -83,6 +83,8 @@ class device:
     def addCommand(self, cmd):
         # Add a new command to the queue
 
+        self.status = 1
+
         # Update command with unlockToken if necessary
         if cmd['Command']['RequestType'] == 'ClearPasscode':
             cmd['Command']['UnlockToken'] = Data(self.unlockToken)
@@ -112,4 +114,10 @@ class device:
         print self.cmdList.keys()
         self.cmdList[cmdUUID]['response'] = response
         # Check response to see if error? if so, status=3
-        self.cmdList[cmdUUID]['status'] = 'success'
+        print response
+        if response['Status'] == 'Acknowledged':
+            self.cmdList[cmdUUID]['status'] = 'success'
+            self.status = 0
+        elif response['Status'] == 'Error':
+            self.cmdList[cmdUUID]['status'] = 'danger'
+            self.status = 2
