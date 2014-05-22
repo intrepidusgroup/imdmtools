@@ -88,8 +88,7 @@
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>-->
-    <script src="jquery-1.11.0.min.js"></script>
+    <script src="./dist/js/jquery-1.11.0.min.js"></script>
     <script src="./dist/js/bootstrap.min.js"></script>
     <script src="./dist/js/mustache.min.js"></script>
     <!-- Ideally move mustache template to another file -->
@@ -261,7 +260,7 @@
 
       // Temporary version of "update()" until scalable solution found
       populate_devices();
-      setInterval(populate_devices, 3000);
+      setInterval(populate_devices, 500);
 
       // Check for device-specific content and enable if applicable
       if(checkDevice()){
