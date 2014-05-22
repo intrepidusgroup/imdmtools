@@ -48,6 +48,13 @@ class device:
     def getResponse(self, cmdUUID):
         return self.cmdList[cmdUUID]['response']
 
+    def sortCommands(self):
+        temp = []
+        for key in self.cmdList:
+            temp.append((self.cmdList[key]['order'], key))
+        return sorted(temp, reverse=True)
+
+
     def populate(self):
         # Returns info as a dictionary for use as JSON with mustache
         d = {}
@@ -60,9 +67,12 @@ class device:
         d['status'] = ['success', 'warning', 'danger'][self.status]
         #d['icon'] = ['ok', 'refresh', 'remove'][self.status] # possible glyphicon functionality
 
+        # Send back 5 most recent commands
+        temp = self.sortCommands()
+
         d['commands'] = []
-        for key in self.cmdList:
-            d['commands'].append(self.cmdList[key])
+        for tuple in temp[:5]:
+            d['commands'].append(self.cmdList[tuple[1]])
 
         return d
 
@@ -111,10 +121,8 @@ class device:
     def addResponse(self, cmdUUID, response):
         # Add a response to correspond with a previous command
         print "**ADDING RESPONSE TO CMD:", cmdUUID
-        print self.cmdList.keys()
         self.cmdList[cmdUUID]['response'] = response
         # Check response to see if error? if so, status=3
-        print response
         if response['Status'] == 'Acknowledged':
             self.cmdList[cmdUUID]['status'] = 'success'
             self.status = 0
