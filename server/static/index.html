@@ -91,55 +91,6 @@
     <script src="./dist/js/jquery-1.11.0.min.js"></script>
     <script src="./dist/js/bootstrap.min.js"></script>
     <script src="./dist/js/mustache.min.js"></script>
-    <!-- Ideally move mustache template to another file -->
-    <script id="template" type="x-tmpl-mustache">
-{{#devices}}
-<div class="panel panel-{{status}}" id="{{UDID}}">
-  <div class="panel-heading">
-    <h4 class="panel-title">
-      <div class="col-sm-1"><input class="row_box" UDUD="{{UDID}}" type="checkbox" name="box" /></div>
-      <a data-toggle="collapse" data-parent="#accordion" href="#collapse{{UDID}}">
-        <div class="row">
-          <div class="col-sm-4">{{name}}</div>
-          <div class="col-sm-3">{{owner}}</div>
-          <div class="col-sm-3">{{location}}</div>
-
-        </div>
-      </a>
-    </h4>
-  </div>
-  <div class="panel-collapse collapse" id="collapse{{UDID}}">
-    <div class="panel-body">
-      <div class="col-sm-1"></div>
-        <div class="col-sm-4">UDID: {{UDID}}</div>
-        <div class="col-sm-3">IP: {{ip}}</div>
-        <div class="col-sm-3"><span class="glyphicon glyphicon-globe"></span> {{geo}}</div>
-      </div>
-
-<table class="table table-condensed">
-<thead>
-<tr>
-<th>Status</th>
-<th>Command</th>
-<th>Options</th>
-</tr>
-</thead>
-<tbody>
-{{#commands}}
-<tr id="command{{cmd.CommandUUID}}">
-<td>*</td>
-<td>{{cmd.Command.RequestType}}</td>
-<td><button type="button" class="btn btn-xs btn-primary" id="{{cmd.CommandUUID}}" data-toggle="modal" data-target="#modal">Response</button></td>
-</tr>
-{{/commands}}
-</tbody>
-</table>
-    </div>
-  </div>
-</div>
-
-{{/devices}}
-</script>
 
     <script>
     function update(dev_list, last_cmd, last_result, problems){
@@ -201,26 +152,25 @@
         else{
           checksum = JSON.stringify(raw);
         }
-        var view = jQuery.parseJSON(raw);
-        var template = $('#template').html();
-        var rendered = Mustache.render(template, view);
 
-        $('#accordion').html(rendered);
+        // Use mustache to populate the accordion
+        $.get("devices.mustache.html", function(template){
+          var rendered = Mustache.render(template, jQuery.parseJSON(raw));
+          $('#accordion').html(rendered);
 
-      $(".btn-xs").click(function(event){
-        // Get device UDID and command UUID
-        var udid = $(this).closest(".panel").attr("id");
-        var uuid = $(this).attr("id");
+          // Set response button on click to update the modal
+          // May need to add a specific class for response if adding retry/cancel buttons
+          $(".btn-xs").click(function(event){
+            // Get device UDID and command UUID
+            var udid = $(this).closest(".panel").attr("id");
+            var uuid = $(this).attr("id");
 
-        // Access /response with to get the response string
-        $.post("/response", JSON.stringify({"UDID":udid, "UUID":uuid}), function(data){
-          $("#modal_body").html(data);
+            // Access /response with to get the response string
+            $.post("/response", JSON.stringify({"UDID":udid, "UUID":uuid}), function(data){
+              $("#modal_body").html(data);
+            });
+          });
         });
-
-
-      });
-
-
       });
     }
 
@@ -294,8 +244,10 @@
           };
 
           // Use stringify to fix odd error with passing just parameters
-          $.post("/queue", JSON.stringify(parameters), function(data){
-            data = JSON.parse(data);
+          $.post("/queue", JSON.stringify(parameters), function(){
+          //$.post("/queue", JSON.stringify(parameters), function(data){
+            //reenable data if switching back to update()
+            //data = JSON.parse(data);
             //update(data["dev_list"], data["last_cmd"], data["last_result"], data["problems"]);
           });
         }
