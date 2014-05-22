@@ -10,17 +10,19 @@ class device:
         self.deviceToken = tuple[2]
         self.unlockToken = tuple[3]
 
-        # Hard coded information to show possible feature
+        # Hard coded information to show possible features
         self.GEO = "42*21'29''N 71*03'49''W"
         self.owner = 'John Snow'
         self.location = 'Winterfell'
-        self.status = 0# 0=ready for command (green? gray?)
-                       # 1=command in queue (yellow)
-                       # 2=error/timeout (red)
-                       # maybe have green (last command successful?)
 
 
-        # Possible additional parameters
+        self.status = 0 # 0=ready for command (green? gray?)
+                        # 1=command in queue (yellow)
+                        # 2=error/timeout (red)
+                        # maybe have green (last command successful?)
+
+
+        # Possible additional parameters based on query commands
         #self.availableCapacity
         #self.totalCapacity
         #self.installedApps
@@ -31,7 +33,7 @@ class device:
 
         # Dictionary to hold commands and responses that HAVE been sent
         # Keys are Command UUID, value is a dictionary
-        # {'command', 'response', 'result', 'order', 'status'}
+        # {'command', 'response', 'order', 'status'}
         self.cmdList = {}
 
         # Queue to hold commands that HAVE NOT been sent
@@ -56,7 +58,7 @@ class device:
 
 
     def populate(self):
-        # Returns info as a dictionary for use as JSON with mustache
+        # Returns info as a dictionary for use with mustache
         d = {}
         d['UDID'] = self.UDID
         d['name'] = self.name
@@ -69,7 +71,6 @@ class device:
 
         # Send back 5 most recent commands
         temp = self.sortCommands()
-
         d['commands'] = []
         for tuple in temp[:5]:
             d['commands'].append(self.cmdList[tuple[1]])
@@ -77,6 +78,8 @@ class device:
         return d
 
     def customInfo(self, newOwner, newLocation, newName):
+        # Possible fuction for customizable info
+        # Use named variables or possible split into 3 functions? 
         pass
 
     def updateInfo(self, newName, newModel, newOS):
@@ -92,7 +95,7 @@ class device:
 
     def addCommand(self, cmd):
         # Add a new command to the queue
-
+        # Update status to show command pending
         self.status = 1
 
         # Update command with unlockToken if necessary
@@ -122,7 +125,7 @@ class device:
         # Add a response to correspond with a previous command
         print "**ADDING RESPONSE TO CMD:", cmdUUID
         self.cmdList[cmdUUID]['response'] = response
-        # Check response to see if error? if so, status=3
+        # Check response for success/failure
         if response['Status'] == 'Acknowledged':
             self.cmdList[cmdUUID]['status'] = 'success'
             self.status = 0
