@@ -90,7 +90,7 @@ Your screen should be similar to the following:
 ![Enrollment Configuration](images/enrollConfig.png)
 
 After you are finished, highlight the entry in the table, and click **Export**.  Choose **None** for security and then **Export...**.  The export window should look like:  
-![Enrollment Export](images/enrollExport.jpg)
+![Enrollment Export](images/enrollExport.png)
 
 Save in the **mdm-server/server/** directory as **Enroll**.  You should now have an **Enroll.mobileconfig** file.
 
@@ -123,7 +123,7 @@ Once there you need to, in order:
  3. Select Command (DeviceLock is a good one to test) and check your device.  Click Submit to send the command.
 
 ---
-![Device Enrollment Steps](images/deviceEnroll.png)
+![Device Enrollment Steps](images/deviceEnroll.jpg)
 ---
 
 You can now run those commands from any web browser, a successfull command will often looks something like the following:
