@@ -7,15 +7,39 @@ Instructions and code for setting up a simple iOS Mobile Device Management (MDM)
  * Publicly accessible Linux/Unix server
  * Apple Enterprise Account
  * Apple Developer Account
+ * Python 2.7
  * openssl command-line
  * Java SDK (java/javac)
  * Apple's iPhone Configuration Utility
-    * (OS X Version)[http://support.apple.com/kb/dl1465]
-    * (Windows Version)[http://support.apple.com/kb/DL1466]
+    * [OS X Version](http://support.apple.com/kb/dl1465)
+    * [Windows Version](http://support.apple.com/kb/DL1466)
 
 # Certificate Setup
 
-First in the **scripts** directory, modify **server.cnf** replacing **&lt;SERVER_IP&gt;** with your server's IP address. Next run **make_certs.sh**, be careful to read the directions at the top of each step (Usually specifying the 'Common Name' needed).  Hopefully this works properly and generates 90% of what you need.
+### Instructions
+
+ 1. In the **/scripts** directory, open **server.cnf**.  Replace all instances of **&lt;SERVER_IP&gt;** with your server's IP address.
+ 2. Run **make_certs.sh**, which can be found in the **/scripts** directory.
+   * Carefully read the directions given for each step and follow the instructions
+   * This should generate several certificates needed to move forward to the next step.  See the Explanation section for more details.
+ 3. Go to Apple's [iOS Provisioning Portal](Apple Member Center). Upload **customer.csr** in the **/scripts** folder on the iOS Provisioning Portal.
+   * You will be given the option to download a .cer file.  Do so and name this file something along the lines of YOUR_MDM.cer.  
+   * Run the following openssl command in your terminal and then move the generated mdm.pem file to **/vendor-signing/com/softhinker** (it should replace an empty file of the same name).
+    openssl x509 -inform der -in YOUR_MDM.cer -out mdm.pem
+ 4. Find **Test.java** in the **/vendor-signing/com/softhinker** folder.  On line 95, replace the word *test* with the PEM password that you used when running make_certs.sh.
+   * Replace only the word text so that your password is still in quotes.
+ 5. Run the **vendor-signing.sh** script found in the **/scripts** directory.
+   * There now should be a file named plist_encoded located in **/vendor-signing**.
+ 6. Go to [Apple's Push Certificates Portal](https://identity.apple.com/pushcert/) and upload the plist_encoded file.  Download the certificate as **PushCert.pem** and place it within the **/server** directory.
+   * Notice the (i) icon beside the renew option.  If you click it there will be a long string of text ending in **UID=com.apple.mgmt...**, make sure to copy that string starting at **com** since you will need it later.
+
+![Apple Portal](images/certPortal.png)
+
+
+### Explanation
+
+
+Hopefully this works properly and generates 90% of what you need.
 
 In the vendor-signing directory, under com/softhinker, you will notice several certificates are included:
  * customer.der
@@ -23,7 +47,7 @@ In the vendor-signing directory, under com/softhinker, you will notice several c
    * Generated from **make_certs.sh**
    * Accept defaults for all other values (Including **Challenge password**)
  * intermediate.pem 
-   * Automatically replace by make_certs
+   * Automatically replace by **make_certs.sh**
    * Apple's WWDR intermediate certificate
  * mdm.pem
    * Must be replaced
@@ -32,20 +56,14 @@ In the vendor-signing directory, under com/softhinker, you will notice several c
    * Download the file, should be in .cer format
    * Convert to pem: **openssl x509 -inform der -in YOUR_MDM.cer -out mdm.pem**
  * root.pem
-   * Automatically replace by make_certs
+   * Automatically replace by **make_certs.sh**
    * Apple's root certificate
  * vendor.p12
    * Must be replaced
    * Generated from **make_certs.sh**
 
-Now that all certificates are in place, find **Test.java** under vendor-signing/com/softhinker. On line 95, change <code>password = "test";</code> to use your password specified during **make_certs.sh** step 1.  
+After generating certificates and placing your PEM password in line 95 of Test.java, the vendor-signing.sh script will be run.  This script takes several scripts we have already generated and creates a plist for use with apple's push certificates portal.
 
-Run **vendor-signing.sh** under the scripts directory. You should now have **plist_encoded.plist** in the **vendor-signing** directory.  Upload this to [Apple's Push Certificates Portal](https://identity.apple.com/pushcert/).  If all was successfull you will see a screen similar to below:
-
-![Apple Portal](images/certPortal.png)
-
-
-Notice the (i) icon besides renew.  If you click it there will be a long string of text ending in **UID=com.apple.mgmt...**, make sure to copy that string starting at **com** since you will need it later.  Finally download the certificate, save as **PushCert.pem** in the **server** directory.
 
 # Enrollment profile
 
@@ -79,7 +97,7 @@ Save in the **mdm-server/server/** directory as **Enroll**.  You should now have
 
 # Server Setup
 
-The server code is a direct copy from [Intrepidus Group's blackhat presentation](https://intrepidusgroup.com/).  Copy over the **mdm-server/server** directory you put the enrollment profile and certificates in to your server.  You will need to install the following:
+The server code based on and heavily takes from [Intrepidus Group's blackhat presentation](https://intrepidusgroup.com/).  Copy over the **mdm-server/server** directory you put the enrollment profile and certificates in to your server.
 
 You must have the following installed on the server:
   * Openssl
@@ -96,13 +114,13 @@ Network Settings
   * Inbound access to port 8080
   * iOS device must also have outbound access to gateway.push.apple.com:5223
 
-If everything is setup appropriately, simply navigate to the **scripts** directory and run **./daemonScript.sh**.
+If everything is setup appropriately, simply navigate to the **/server** directory and run <code>python server.py</code>.
 
 On the device navigate to: **https://YOUR_HOST:8080/**
 Once there you need to, in order: 
- 1. Tap here to install the CA Cert (for Server/Identity)
- 2. Tap here to enroll in MDM 
- 3. Select Command (Device Lock is a good one to test)
+ 1. Tap *here* to install the CA Cert (for Server/Identity)
+ 2. Tap *here* to enroll in MDM (the device should appear after this step) 
+ 3. Select Command (DeviceLock is a good one to test) and check your device.  Click Submit to send the command.
 
 ---
 ![Device Enrollment Steps](images/deviceEnroll.png)
@@ -113,7 +131,7 @@ You can now run those commands from any web browser, a successfull command will 
 ---
 ![Command Success](images/commandSuccess.png)
 ---
-You may have to hit the **refresh** link, if the output doesn't look recent.
+Note: Image out of date.  Working on a new image to replace it.
 
 # Client Reporting
 
@@ -147,6 +165,3 @@ This client API can be coupled with the [iMAS security-check controls](git@githu
 Some sticking points that folks may run into:
 * Modify "scripts/server.cnf" to have your server's IP address in place of <SERVER_IP>. 
 * Be careful to follow the prompts for each step of make_certs.sh, you do need to put things for common name when asked.
-* I just updated make_certs.sh to to grab the Apple certs needed directly (Requires curl), it looks like they were missing from the repo (0 length).
-
-
