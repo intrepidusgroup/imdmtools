@@ -90,7 +90,7 @@ Your screen should be similar to the following:
 ![Enrollment Configuration](images/enrollConfig.png)
 
 After you are finished, highlight the entry in the table, and click **Export**.  Choose **None** for security and then **Export...**.  The export window should look like:  
-![Enrollment Export](images/enrollExport.png)
+![Enrollment Export](images/enrollExport.jpg)
 
 Save in the **mdm-server/server/** directory as **Enroll**.  You should now have an **Enroll.mobileconfig** file.
 
