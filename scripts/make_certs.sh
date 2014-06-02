@@ -1,6 +1,14 @@
 #!/bin/sh
 
 echo ""
+echo "Setting up server.cnf."
+echo "Please enter the IP address of your server."
+read IP
+sed -i -e "s/<SERVER_IP>/$IP/g" server.cnf
+echo "Done."
+echo ""
+
+echo ""
 echo "Setting up certificates for MDM server testing!"
 echo ""
 echo "1. Creating Certificate Authority (CA)"

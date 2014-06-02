@@ -18,19 +18,18 @@ Instructions and code for setting up a simple iOS Mobile Device Management (MDM)
 
 ### Instructions
 
- 1. In the **/scripts** directory, open **server.cnf**.  Replace all instances of **&lt;SERVER_IP&gt;** with your server's IP address.
- 2. Run **make_certs.sh**, which can be found in the **/scripts** directory.
+ 1. Run **make_certs.sh**, which can be found in the **/scripts** directory.
    * Carefully read the directions given for each step and follow the instructions
    * This should generate several certificates needed to move forward to the next step.  See the Explanation section for more details.
- 3. Go to Apple's [iOS Provisioning Portal](Apple Member Center). Upload **customer.csr** in the **/scripts** folder on the iOS Provisioning Portal.
+ 2. Go to Apple's [iOS Provisioning Portal](Apple Member Center). Upload **customer.csr** in the **/scripts** folder on the iOS Provisioning Portal.
    * You will be given the option to download a .cer file.  Do so and name this file something along the lines of YOUR_MDM.cer.  
    * Run the following openssl command in your terminal and then move the generated mdm.pem file to **/vendor-signing/com/softhinker** (it should replace an empty file of the same name).
     openssl x509 -inform der -in YOUR_MDM.cer -out mdm.pem
- 4. Find **Test.java** in the **/vendor-signing/com/softhinker** folder.  On line 95, replace the word *test* with the PEM password that you used when running make_certs.sh.
+ 3. Find **Test.java** in the **/vendor-signing/com/softhinker** folder.  On line 95, replace the word *test* with the PEM password that you used when running make_certs.sh.
    * Replace only the word text so that your password is still in quotes.
- 5. Run the **vendor-signing.sh** script found in the **/scripts** directory.
+ 4. Run the **vendor-signing.sh** script found in the **/scripts** directory.
    * There now should be a file named plist_encoded located in **/vendor-signing**.
- 6. Go to [Apple's Push Certificates Portal](https://identity.apple.com/pushcert/) and upload the plist_encoded file.  Download the certificate as **PushCert.pem** and place it within the **/server** directory.
+ 5. Go to [Apple's Push Certificates Portal](https://identity.apple.com/pushcert/) and upload the plist_encoded file.  Download the certificate as **PushCert.pem** and place it within the **/server** directory.
    * Notice the (i) icon beside the renew option.  If you click it there will be a long string of text ending in **UID=com.apple.mgmt...**, make sure to copy that string starting at **com** since you will need it later.
 
 ![Apple Portal](images/certPortal.png)
@@ -38,8 +37,7 @@ Instructions and code for setting up a simple iOS Mobile Device Management (MDM)
 
 ### Explanation
 
-
-Hopefully this works properly and generates 90% of what you need.
+In the scripts directory, there exists a server.cnf.  This is used for certificate generation and the first step of the script will place the server IP address in the correct place.
 
 In the vendor-signing directory, under com/softhinker, you will notice several certificates are included:
  * customer.der
@@ -135,7 +133,7 @@ Note: Image out of date.  Working on a new image to replace it.
 
 # Client Reporting
 
-The MDM server also has REST endpoints for reporting issues and geolocation data from the enrolled clients.  The API can be imported into any project as follows:
+The MDM server also has REST endpoints for reporting issues and geolocation data from the enrolled clients.  This functionality may be used at a later point in time by a security app. The API can be imported into any project as follows:
 
 * Click on the top level Project item and add files ("option-command-a")
 * Navigate to client-reporting/
@@ -163,5 +161,5 @@ This client API can be coupled with the [iMAS security-check controls](git@githu
 
 
 Some sticking points that folks may run into:
-* Modify "scripts/server.cnf" to have your server's IP address in place of <SERVER_IP>. 
 * Be careful to follow the prompts for each step of make_certs.sh, you do need to put things for common name when asked.
+* Check the readme file under the server directory for additional notes (this will eventually be integrated into a single readme).
