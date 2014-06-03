@@ -1,8 +1,10 @@
 from collections import deque
 from plistlib import *
 from operator import itemgetter
+import time
 
 class device:
+    TIMEOUT = 60    # Number of seconds before command times out
     def __init__(self, newUDID, tuple):
         self.UDID = newUDID
         self.IP = tuple[0]
@@ -48,6 +50,7 @@ class device:
         return self.pushMagic, self.deviceToken
 
     def getResponse(self, cmdUUID):
+        print self.cmdList.keys()
         return self.cmdList[cmdUUID]['response']
 
     def sortCommands(self):
@@ -98,6 +101,9 @@ class device:
         # Update status to show command pending
         self.status = 1
 
+        #print cmd
+        cmd['TimeStamp'] = time.time()
+
         # Update command with unlockToken if necessary
         if cmd['Command']['RequestType'] == 'ClearPasscode':
             cmd['Command']['UnlockToken'] = Data(self.unlockToken)
@@ -132,3 +138,32 @@ class device:
         elif response['Status'] == 'Error':
             self.cmdList[cmdUUID]['status'] = 'danger'
             self.status = 2
+
+    def checkTimeout(self):
+        # Checks for command timeout
+        now = time.time()
+
+        # If we have no commands waiting, we're good
+        if self.status != 1:
+            return
+        
+        # Check queue for timed out commands
+        if len(self.queue) > 0:
+            for cmd in self.queue:
+                if now - cmd['TimeStamp'] > self.TIMEOUT:
+                    # Command has time out, add it to cmd list with an error
+                    self.status = 2
+                    self.queue.remove(cmd)
+                    self.cmdList[cmd['CommandUUID']] = {}
+                    self.cmdList[cmd['CommandUUID']]['cmd'] = cmd
+                    self.cmdList[cmd['CommandUUID']]['response'] = {'Status':'TimeoutError'}
+                    self.cmdList[cmd['CommandUUID']]['status'] = 'danger'
+                    self.cmdList[cmd['CommandUUID']]['order'] = len(self.cmdList.keys())
+                    return
+
+        # Check command list for timed out commands
+        for commandUUID in self.cmdList:
+            if self.cmdList[commandUUID]['response'] == "" and now-self.cmdList[commandUUID]['cmd']['TimeStamp'] > self.TIMEOUT:
+                self.status = 2
+                self.cmdList[command['cmd']['CommandUUID']]['status'] = 'danger'
+                self.cmdList[command['cmd']['CommandUUID']]['response'] = {'Status':'TimeoutError'}

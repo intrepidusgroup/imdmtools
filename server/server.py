@@ -330,7 +330,7 @@ class queue_cmd_post:
 
 	    # Update page - currently not using update()
         #return update()
-	    return
+        return
 
 class do_mdm:        
     def PUT(self):
@@ -476,6 +476,7 @@ class dev_tab:
         devices = []
 
         for key in device_list:
+            device_list[key].checkTimeout()
             devices.append(device_list[key].populate())
 
         # A device-sorting functionality could happen here
