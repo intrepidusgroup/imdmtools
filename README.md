@@ -24,9 +24,11 @@ Instructions and code for setting up a simple iOS Mobile Device Management (MDM)
  2. Go to Apple's [iOS Provisioning Portal](Apple Member Center). Upload **customer.csr** in the **/scripts** folder on the iOS Provisioning Portal.
    * You will be given the option to download a .cer file.  Do so and name this file something along the lines of YOUR_MDM.cer.  
    * Run the following openssl command in your terminal and then move the generated mdm.pem file to **/vendor-signing/com/softhinker** (it should replace an empty file of the same name).
+
     openssl x509 -inform der -in YOUR_MDM.cer -out mdm.pem
+
  3. Find **Test.java** in the **/vendor-signing/com/softhinker** folder.  On line 95, replace the word *test* with the PEM password that you used when running make_certs.sh.
-   * Replace only the word text so that your password is still in quotes.
+   * Replace only the word test so that your password is still in quotes.
  4. Run the **vendor-signing.sh** script found in the **/scripts** directory.
    * There now should be a file named plist_encoded located in **/vendor-signing**.
  5. Go to [Apple's Push Certificates Portal](https://identity.apple.com/pushcert/) and upload the plist_encoded file.  Download the certificate as **PushCert.pem** and place it within the **/server** directory.
@@ -92,6 +94,8 @@ After you are finished, highlight the entry in the table, and click **Export**. 
 
 Save in the **mdm-server/server/** directory as **Enroll**.  You should now have an **Enroll.mobileconfig** file.
 
+Finally, some versions of IPCU don't include the correct settings for all versions of iOS.  Open the Enroll.mobileconfig file in a text editor.  Find the **AccessRights** key.  Make sure the value is 8191 (some versions of ICPU will use 2047, if you see this, change it to 8191) and then save.
+
 
 # Server Setup
 
@@ -119,6 +123,7 @@ Once there you need to, in order:
  1. Tap *here* to install the CA Cert (for Server/Identity)
  2. Tap *here* to enroll in MDM (the device should appear after this step) 
  3. Select Command (DeviceLock is a good one to test) and check your device.  Click Submit to send the command.
+ 4. If everything works, you're good to go!  As of right now some of the commands aren't fully implemented.  Feel free to experiment with different commands!
 
 ---
 ![Device Enrollment Steps](images/deviceEnroll.jpg)
@@ -160,6 +165,4 @@ The library provides the following functions:
 This client API can be coupled with the [iMAS security-check controls](git@github.com:project-imas/security-check.git) to provide accurate reporting of jailbreak and debugger detection.  
 
 
-Some sticking points that folks may run into:
-* Be careful to follow the prompts for each step of make_certs.sh, you do need to put things for common name when asked.
-* Check the readme file under the server directory for additional notes (this will eventually be integrated into a single readme).
+Apologies for the long and complex setup, we hope to eventually make things easier and simpler.  Please post questions to github if you get stuck and we'll do our best to help.  Enjoy!
