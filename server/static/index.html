@@ -164,6 +164,7 @@
             // Get device UDID and command UUID
             var udid = $(this).closest(".panel").attr("id");
             var uuid = $(this).attr("id");
+            // TODO: SOMETHING WRONG WITH UUID - GETTING WRONG COMMAND?
 
             // Access /response with to get the response string
             $.post("/response", JSON.stringify({"UDID":udid, "UUID":uuid}), function(data){
@@ -236,7 +237,6 @@
         }
         else{
           // Send AJAX request
-
           // Variable to pass all necessary data to server
           var parameters = {
             "cmd":$("#commands").val(),

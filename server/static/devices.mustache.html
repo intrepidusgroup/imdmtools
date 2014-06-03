@@ -33,7 +33,7 @@
       <tbody>
 {{#commands}}
         <tr id="command{{cmd.CommandUUID}}">
-          <td>*</td>
+          <td><span class="glyphicon {{status}} glyphicon-certificate"></span></td>
           <td>{{cmd.Command.RequestType}}</td>
           <td><button type="button" class="btn btn-xs btn-primary" id="{{cmd.CommandUUID}}" data-toggle="modal" data-target="#modal">Response</button></td>
         </tr>
