@@ -299,7 +299,7 @@ def queue(cmd, dev_UDID):
 
     # Have to search through device_list using pushmagic or devtoken to get UDID
     for key in device_list:
-        if device_list[key].deviceToken == mylocal_DeviceToken:
+        if device_list[key].UDID == dev_UDID:
             device_list[key].addCommand(cmd_data)
             print "*Adding CMD:", cmd_data['CommandUUID'], "to device:", key
             break

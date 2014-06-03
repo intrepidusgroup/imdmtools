@@ -50,7 +50,6 @@ class device:
         return self.pushMagic, self.deviceToken
 
     def getResponse(self, cmdUUID):
-        print self.cmdList.keys()
         return self.cmdList[cmdUUID]['response']
 
     def sortCommands(self):
