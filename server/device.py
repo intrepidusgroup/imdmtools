@@ -1,10 +1,10 @@
 from collections import deque
 from plistlib import *
 from operator import itemgetter
-import time
+import time, datetime, copy
 
 class device:
-    TIMEOUT = 60    # Number of seconds before command times out
+    TIMEOUT = 20    # Number of seconds before command times out
     def __init__(self, newUDID, tuple):
         self.UDID = newUDID
         self.IP = tuple[0]
@@ -75,7 +75,36 @@ class device:
         temp = self.sortCommands()
         d['commands'] = []
         for tuple in temp[:5]:
-            d['commands'].append(self.cmdList[tuple[1]])
+            # Check for commands with variables that are not JSON serializable
+            if 'UnlockToken' in self.cmdList[tuple[1]]['cmd']['Command']:
+                # Remove unlocktoken from output
+                temp_cmd = copy.deepcopy(self.cmdList[tuple[1]])
+                temp_cmd['cmd']['Command']['UnlockToken'] = 'Redacted by server'
+                d['commands'].append(temp_cmd)
+            elif 'CertificateList' in self.cmdList[tuple[1]]['response']:
+                # Remove CertificateList data from output
+                # TODO: Possibly implement some other method of delivering certificate data
+                temp_cmd = copy.deepcopy(self.cmdList[tuple[1]])
+                for i in range(len(temp_cmd['response']['CertificateList'])):
+                   temp_cmd['response']['CertificateList'][i]['Data'] = 'Redacted by server'
+                d['commands'].append(temp_cmd)
+            elif 'ProfileList' in self.cmdList[tuple[1]]['response']:
+                # Remove SignerCertificates data from output
+                # Note that some profiles may not have SignerCertificates, in which case this
+                # will add it to the ProfileList, though only for response output on server
+                temp_cmd = copy.deepcopy(self.cmdList[tuple[1]])
+                for i in range(len(temp_cmd['response']['ProfileList'])):
+                    temp_cmd['response']['ProfileList'][i]['SignerCertificates'] = 'Redacted by server'
+                d['commands'].append(temp_cmd)
+            elif 'ProvisioningProfileList' in self.cmdList[tuple[1]]['response']:
+                # Change ExpiryDate datetime objects to UTC strings for output
+                temp_cmd = copy.deepcopy(self.cmdList[tuple[1]])
+                for i in range(len(temp_cmd['response']['ProvisioningProfileList'])):
+                    temp_cmd['response']['ProvisioningProfileList'][i]['ExpiryDate'] = temp_cmd['response']['ProvisioningProfileList'][i]['ExpiryDate'].strftime("%Y-%m-%d %H:%M:%S") + " UTC"
+                d['commands'].append(temp_cmd)
+
+            else:
+                d['commands'].append(self.cmdList[tuple[1]])
 
         return d
 
@@ -99,8 +128,6 @@ class device:
         # Add a new command to the queue
         # Update status to show command pending
         self.status = 1
-
-        #print cmd
         cmd['TimeStamp'] = time.time()
 
         # Update command with unlockToken if necessary
