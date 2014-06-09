@@ -166,3 +166,26 @@ This client API can be coupled with the [iMAS security-check controls](git@githu
 
 
 Apologies for the long and complex setup, we hope to eventually make things easier and simpler.  Please post questions to github if you get stuck and we'll do our best to help.  Enjoy!
+
+
+
+# LICENSE AND ATTRIBUTION
+
+Copyright 2013-2014 The MITRE Corporation, All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this work except in compliance with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+
+
+This project also uses code from various sources under various licenses.
+
+[The original code from the Intrepidus Group's python server is under the BSD License found here.](server/LICENSE)
+
+[The Softhinker certificate signing code is under the Apache License found here.](vendor-signing/LICENSE)
+
+[The website's Bootstrap code is under the MIT License found here.](server/static/dist/LICENSE)
+
+Finally we use some free [glyphicons](http://glyphicons.com/) that are included with bootstrap.
