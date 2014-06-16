@@ -134,7 +134,9 @@ You can now run those commands from any web browser, a successfull command will 
 ---
 ![Command Success](images/commandSuccess.png)
 ---
-Note: Image out of date.  Working on a new image to replace it.
+
+Click the "Response" button to see the plist response from apple.
+
 
 # Client Reporting
 
