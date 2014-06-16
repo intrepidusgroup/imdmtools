@@ -160,17 +160,44 @@
 
           // Set response button on click to update the modal
           // May need to add a specific class for response if adding retry/cancel buttons
-          $(".btn-xs").click(function(event){
+          $(".response-btn").click(function(event){
             // Get device UDID and command UUID
             var udid = $(this).closest(".panel").attr("id");
             var uuid = $(this).attr("id");
-            // TODO: SOMETHING WRONG WITH UUID - GETTING WRONG COMMAND?
 
-            // Access /response with to get the response string
+            // Access /response to get the response string
             $.post("/response", JSON.stringify({"UDID":udid, "UUID":uuid}), function(data){
               $("#modal_body").html(data);
             });
           });
+
+          // Puts HTML content inside the popover
+          $(".trigger").popover({
+            html: true,
+            title: function () {
+              return $(this).parent().find('.head').html();
+            },
+            content: function () {
+              return $(this).parent().find('.content').html();
+            }
+          });
+
+          // Submit input group when submit button clicked
+          $('body').on('click', '.popover-submit', function(){
+            // Get UDID and form values
+            var udid = $(this).attr("id");
+            var name = $(this).parent().find("#input-name").val();
+            var owner = $(this).parent().find("#owner-name").val();
+            var location = $(this).parent().find("#location-name").val();
+
+            // POST data to /metadata endpoint
+            $.post("/metadata", JSON.stringify({"UDID":udid,"name":name,"owner":owner,"location":location}), function(){});
+
+            $("#metadatapopover".concat(udid)).popover("hide");
+
+          });
+
+
         });
       });
     }

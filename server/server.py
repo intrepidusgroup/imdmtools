@@ -108,6 +108,7 @@ urls = (
     '/getcommands', 'get_commands',
     '/devices', 'dev_tab',
     '/response', 'get_response',
+    '/metadata', 'metadata',
 )
 
 
@@ -119,11 +120,10 @@ def setup_commands():
     ret_list = dict()
 
     for cmd in ['DeviceLock', 'ProfileList', 'Restrictions',
-        'CertificateList', 'InstalledApplicationList', 
-        'ProvisioningProfileList', 
-# new for iOS 5:
-        'ManagedApplicationList',
-	]:
+    'CertificateList', 'InstalledApplicationList', 
+    'ProvisioningProfileList', 
+    # new for iOS 5:
+    'ManagedApplicationList',]:
         ret_list[cmd] = dict( Command = dict( RequestType = cmd ))
 
     ret_list['SecurityInfo'] = dict(
@@ -148,8 +148,8 @@ def setup_commands():
                 'PhoneNumber', 'Product', 'ProductName', 'SIMCarrierNetwork', 
                 'SIMMCC', 'SIMMNC', 'SerialNumber', 'UDID', 'WiFiMAC', 'UDID',
                 'UnlockToken', 'MEID', 'CellularTechnology', 'BatteryLevel', 
-		        'SubscriberCarrierNetwork', 'VoiceRoamingEnabled', 
-		        'SubscriberMCC', 'SubscriberMNC', 'DataRoaming', 'VoiceRoaming',
+                'SubscriberCarrierNetwork', 'VoiceRoamingEnabled', 
+                'SubscriberMCC', 'SubscriberMNC', 'DataRoaming', 'VoiceRoaming',
                 'JailbreakDetected'
             ]
         )
@@ -487,6 +487,19 @@ class dev_tab:
         # return JSON
         return json.dumps(out)
 
+class metadata:
+    def POST(self):
+        # Endpoint to update device metadata
+        global device_list
+
+        i = json.loads(web.data())
+
+        device_list[i['UDID']].updateMetadata(i['name'], i['owner'], i['location'])
+
+        store_devices()
+
+        return
+
 def store_devices():
     # Function to convert the device list and write to a file
     global device_list
@@ -544,7 +557,7 @@ def do_TokenUpdate(pl):
 
 class enroll_profile:
     def GET(self):
-	# Enroll an iPad/iPhone/iPod when requested
+        # Enroll an iPad/iPhone/iPod when requested
         if 'Enroll.mobileconfig' in os.listdir('.'):
             web.header('Content-Type', 'application/x-apple-aspen-config;charset=utf-8')
             web.header('Content-Disposition', 'attachment;filename="Enroll.mobileconfig"')

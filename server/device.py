@@ -5,6 +5,7 @@ import time, datetime, copy
 
 class device:
     TIMEOUT = 20    # Number of seconds before command times out
+    WHITELIST = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 "
     def __init__(self, newUDID, tuple):
         self.UDID = newUDID
         self.IP = tuple[0]
@@ -14,8 +15,8 @@ class device:
 
         # Hard coded information to show possible features
         self.GEO = "42*21'29''N 71*03'49''W"
-        self.owner = 'John Snow'
-        self.location = 'Winterfell'
+        self.owner = 'Unassigned'
+        self.location = 'Unassigned'
 
 
         self.status = 0 # 0=ready for command (green? gray?)
@@ -30,6 +31,7 @@ class device:
         #self.installedApps
 
         self.name = ''
+        self.customName = ''
         self.model = ''
         self.OS = ''
 
@@ -63,7 +65,10 @@ class device:
         # Returns info as a dictionary for use with mustache
         d = {}
         d['UDID'] = self.UDID
-        d['name'] = self.name
+        if self.customName:
+            d['name'] = self.customName
+        else:
+            d['name'] = self.name
         d['ip'] = self.IP
         d['owner'] = self.owner
         d['location'] = self.location
@@ -108,10 +113,24 @@ class device:
 
         return d
 
-    def customInfo(self, newOwner, newLocation, newName):
-        # Possible fuction for customizable info
-        # Use named variables or possible split into 3 functions? 
-        pass
+    def sanitize(self, string):
+        # Function to remove any non-alphanumeric characters from input
+        wl = set(self.WHITELIST)
+
+        for char in set(string)-wl:
+            string = string.replace(char, '');
+
+        return string[:32]
+
+    def updateMetadata(self, newName, newOwner, newLocation):
+        # Fuction for customizable metadata
+        if newName:
+            self.customName = self.sanitize(newName.strip())
+        if newOwner:
+            self.owner = self.sanitize(newOwner.strip())
+        if newLocation:
+            self.location = self.sanitize(newLocation.strip())
+
 
     def updateInfo(self, newName, newModel, newOS):
         # Update class variables with data from DeviceInformation
