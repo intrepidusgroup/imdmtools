@@ -86,9 +86,6 @@ CherryPyWSGIServer.ssl_private_key = "Server.key"
 
 ###########################################################################
 
-last_result = ''
-last_sent = ''
-
 device_list = dict()
 
 global mdm_commands
@@ -111,6 +108,7 @@ urls = (
     '/getcommands', 'get_commands',
     '/devices', 'dev_tab',
     '/response', 'get_response',
+    '/metadata', 'metadata',
 )
 
 
@@ -122,11 +120,10 @@ def setup_commands():
     ret_list = dict()
 
     for cmd in ['DeviceLock', 'ProfileList', 'Restrictions',
-        'CertificateList', 'InstalledApplicationList', 
-        'ProvisioningProfileList', 
-# new for iOS 5:
-        'ManagedApplicationList',
-	]:
+    'CertificateList', 'InstalledApplicationList', 
+    'ProvisioningProfileList', 
+    # new for iOS 5:
+    'ManagedApplicationList',]:
         ret_list[cmd] = dict( Command = dict( RequestType = cmd ))
 
     ret_list['SecurityInfo'] = dict(
@@ -151,8 +148,8 @@ def setup_commands():
                 'PhoneNumber', 'Product', 'ProductName', 'SIMCarrierNetwork', 
                 'SIMMCC', 'SIMMNC', 'SerialNumber', 'UDID', 'WiFiMAC', 'UDID',
                 'UnlockToken', 'MEID', 'CellularTechnology', 'BatteryLevel', 
-		        'SubscriberCarrierNetwork', 'VoiceRoamingEnabled', 
-		        'SubscriberMCC', 'SubscriberMNC', 'DataRoaming', 'VoiceRoaming',
+                'SubscriberCarrierNetwork', 'VoiceRoamingEnabled', 
+                'SubscriberMCC', 'SubscriberMNC', 'DataRoaming', 'VoiceRoaming',
                 'JailbreakDetected'
             ]
         )
@@ -302,7 +299,7 @@ def queue(cmd, dev_UDID):
 
     # Have to search through device_list using pushmagic or devtoken to get UDID
     for key in device_list:
-        if device_list[key].deviceToken == mylocal_DeviceToken:
+        if device_list[key].UDID == dev_UDID:
             device_list[key].addCommand(cmd_data)
             print "*Adding CMD:", cmd_data['CommandUUID'], "to device:", key
             break
@@ -331,9 +328,9 @@ class queue_cmd_post:
         for UDID in dev:
             queue(cmd, UDID)
 
-	    # Update page - currently not using update()
+        # Update page - currently not using update()
         #return update()
-	    return
+        return
 
 class do_mdm:        
     def PUT(self):
@@ -403,6 +400,9 @@ class do_mdm:
                 print HIGH+"Authenticate"+NORMAL
             elif pl.get('MessageType') == 'CheckOut':
                 print HIGH+"Device leaving MDM"+ NORMAL
+            elif pl.get('Status') == 'Error':
+                print "*CALLING ADD RESPONSE WITH ERROR TO CMD:", pl['CommandUUID']
+                device_list[pl['UDID']].addResponse(pl['CommandUUID'], pl)
             else:
                 print HIGH+"(other)"+NORMAL
                 print HIGH, pl, NORMAL
@@ -412,27 +412,7 @@ class do_mdm:
         out = writePlistToString(rd)
         #print LOW, out, NORMAL
 
-        # This is used only for safe printing
-        # Currently not implemented
-        q = pl.get('QueryResponses')
-
         return out
-
-# Code for safer information output
-# Hides important unique identifiers
-# See original MDM code for proper placement
-'''
-        if q:
-            redact_list = ('UDID', 'BluetoothMAC', 'SerialNumber', 'WiFiMAC',
-                'IMEI', 'ICCID', 'SerialNumber')
-            for resp in redact_list:
-                if q.get(resp):
-                    pl['QueryResponses'][resp] = '--redacted--'
-        for top in ('UDID', 'Token', 'PushMagic', 'UnlockToken'):
-            if pl.get(top):
-                pl[top] = '--redacted--'
-'''
-
 
 class get_commands:
     def POST(self):
@@ -453,9 +433,6 @@ def update():
 
     # Function to update devices on the frontend
     # Is called on page load and polling
-
-    # TODO: Change last_result/sent to access device_list - need UDID from server?
-    # This front page update should use name and IP (maybe token)?
 
     global problems, device_list
     
@@ -499,15 +476,29 @@ class dev_tab:
         devices = []
 
         for key in device_list:
-            #return json.dumps(device_list[key].populate())
+            device_list[key].checkTimeout()
             devices.append(device_list[key].populate())
+
+        # A device-sorting functionality could happen here
 
         out = {}
         out['devices'] = devices
 
         # return JSON
         return json.dumps(out)
-        #return json.dumps({'devices':devices})
+
+class metadata:
+    def POST(self):
+        # Endpoint to update device metadata
+        global device_list
+
+        i = json.loads(web.data())
+
+        device_list[i['UDID']].updateMetadata(i['name'], i['owner'], i['location'])
+
+        store_devices()
+
+        return
 
 def store_devices():
     # Function to convert the device list and write to a file
@@ -523,7 +514,6 @@ def read_devices():
     # Is called when the server loads
     global device_list
 
-    # TODO: Add check to create devicelist.pickle if doesnt exist
     try:
         device_list = pickle.load(file('devicelist.pickle'))
         print "LOADED PICKLE"
@@ -542,16 +532,12 @@ def do_TokenUpdate(pl):
 
     newTuple = (web.ctx.ip, my_PushMagic, my_DeviceToken, my_UnlockToken)
 
-
     print "NEW DEVICE UDID:", pl.get('UDID')
     # A new device has enrolled, add a new device
     if pl.get('UDID') not in device_list:
-        print "ADDING DEVICE TO DEVICE_LIST"
         # Device does not already exist, create new instance of device
-
         device_list[pl.get('UDID')] = device(pl['UDID'], newTuple)
-        #device_list[pl.get('UDID')] = device(UDID=pl['UDID'], tuple=newTuple)
-
+        print "ADDING DEVICE TO DEVICE_LIST"
     else:
         # Device exists, update information - token stays the same
         device_list[pl['UDID']].reenroll(web.ctx.ip, my_PushMagic, my_UnlockToken)
@@ -559,18 +545,19 @@ def do_TokenUpdate(pl):
 
 
     # Queue a DeviceInformation command to populate fields in device_list
+    # Is this command causing an off-by-one error with commands?
     queue('DeviceInformation', pl['UDID'])
 
     # Store devices in a file for persistence
     store_devices()
 
-    # Why return empty dictionary?
+    # Return empty dictionary for use in do_mdm 
     return dict()
 
 
 class enroll_profile:
     def GET(self):
-	# Enroll an iPad/iPhone/iPod when requested
+        # Enroll an iPad/iPhone/iPod when requested
         if 'Enroll.mobileconfig' in os.listdir('.'):
             web.header('Content-Type', 'application/x-apple-aspen-config;charset=utf-8')
             web.header('Content-Disposition', 'attachment;filename="Enroll.mobileconfig"')
@@ -580,7 +567,10 @@ class enroll_profile:
 
 class do_problem:
     # DEBUG
-    # DEPRICATED???
+    # DEPRICATED?
+    # TODO: Problems may need to be reworked a bit
+    #       Stop storing in a .py file
+    #       What is the purpose of problems? Whats the end goal?
     def GET(self):
         global problems
         problem_detect = ' ('
@@ -617,7 +607,7 @@ class favicon:
             web.header('Content-Type', 'image/x-icon;charset=utf-8')
             return open('/static/favicon.ico', "rb").read()
         else:
-            raise web.notfound()
+            raise web.ok
 
 
 class app_manifest:
