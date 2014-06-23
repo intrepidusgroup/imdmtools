@@ -15,15 +15,15 @@ class device:
 
         # Hard coded information to show possible features
         self.GEO = "42*21'29''N 71*03'49''W"
+
+        # Owner and location default to unassigned
         self.owner = 'Unassigned'
         self.location = 'Unassigned'
-
 
         self.status = 0 # 0=ready for command (green? gray?)
                         # 1=command in queue (yellow)
                         # 2=error/timeout (red)
                         # maybe have green (last command successful?)
-
 
         # Possible additional parameters based on query commands
         #self.availableCapacity

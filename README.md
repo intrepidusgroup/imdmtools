@@ -26,7 +26,6 @@ Instructions and code for setting up a simple iOS Mobile Device Management (MDM)
    * Run the following openssl command in your terminal and then move the generated mdm.pem file to **/vendor-signing/com/softhinker** (it should replace an empty file of the same name).
 
     openssl x509 -inform der -in YOUR_MDM.cer -out mdm.pem
-
  3. Find **Test.java** in the **/vendor-signing/com/softhinker** folder.  On line 95, replace the word *test* with the PEM password that you used when running make_certs.sh.
    * Replace only the word test so that your password is still in quotes.
  4. Run the **vendor-signing.sh** script found in the **/scripts** directory.
@@ -70,7 +69,7 @@ After generating certificates and placing your PEM password in line 95 of Test.j
 Open the **iPhone Configuration Utilities** program.  Select **Configuration Profiles** click the **New** button, and fill out the sections as follows:
  * General
    *  Name: A unique name for you to keep track of
-   *  Identifier: **com.apple.mgmt...** string you recorded during certificate generation
+   *  Identifier: **com.apple.mgmt...** string you recorded during certificate generation (see step 5 of the certificate setup instructions)
  * Certificates
    * Use **vendor.p12** generated during certificate creation
    * Password: Enter the password you used during certificate creation
