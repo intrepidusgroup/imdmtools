@@ -24,14 +24,15 @@ Instructions and code for setting up a simple iOS Mobile Device Management (MDM)
  2. Go to Apple's [iOS Provisioning Portal](Apple Member Center). Upload **customer.csr** in the **/scripts** folder on the iOS Provisioning Portal.
    * You will be given the option to download a .cer file.  Do so and name this file something along the lines of YOUR_MDM.cer.  
    * Run the following openssl command in your terminal and then move the generated mdm.pem file to **/vendor-signing/com/softhinker** (it should replace an empty file of the same name).
-
-    openssl x509 -inform der -in YOUR_MDM.cer -out mdm.pem
+```
+openssl x509 -inform der -in YOUR_MDM.cer -out mdm.pem
+```
  3. Find **Test.java** in the **/vendor-signing/com/softhinker** folder.  On line 95, replace the word *test* with the PEM password that you used when running make_certs.sh.
    * Replace only the word test so that your password is still in quotes.
  4. Run the **vendor-signing.sh** script found in the **/scripts** directory.
    * There now should be a file named plist_encoded located in **/vendor-signing**.
  5. Go to [Apple's Push Certificates Portal](https://identity.apple.com/pushcert/) and upload the plist_encoded file.  Download the certificate as **PushCert.pem** and place it within the **/server** directory.
-   * Notice the (i) icon beside the renew option.  If you click it there will be a long string of text ending in **UID=com.apple.mgmt...**, make sure to copy that string starting at **com** since you will need it later.
+   * Notice the (i) icon beside the renew option.  If you click it there will be a long string of text ending in **UID=com.apple.mgmt...**, make sure to copy that string starting at **com** since you will need it later on in the enrollment process.
 
 ![Apple Portal](images/certPortal.png)
 
@@ -76,7 +77,7 @@ Open the **iPhone Configuration Utilities** program.  Select **Configuration Pro
  * Mobile Device Management
    * Server URL: https://YOUR_HOSTNAME:8080/server
    * Check In URL: https://YOUR_HOSTNAME:8080/checkin
-   * Topic: **com.apple.mgmt...** string
+   * Topic: **com.apple.mgmt...** string (same as General->Identifier)
    * Identity: vendor.p12
    * Sign messages: Checked
    * Check out when removed: Unchecked
