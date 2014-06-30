@@ -49,10 +49,10 @@
       </thead>
       <tbody>
 {{#commands}}
-        <tr id="command{{cmd.CommandUUID}}">
+        <tr id="command{{response.CommandUUID}}">
           <td><span class="glyphicon {{status}} glyphicon-certificate"></span></td>
           <td>{{cmd.Command.RequestType}}</td>
-          <td><button type="button" class="btn btn-xs btn-primary response-btn" id="{{cmd.CommandUUID}}" data-toggle="modal" data-target="#modal">Response</button></td>
+          <td><button type="button" class="btn btn-xs btn-primary response-btn" id="{{response.CommandUUID}}" data-toggle="modal" data-target="#modal">Response</button></td>
         </tr>
 {{/commands}}
       </tbody>
