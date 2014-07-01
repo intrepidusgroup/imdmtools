@@ -67,13 +67,13 @@ After generating certificates and placing your PEM password in line 95 of Test.j
 
 # Enrollment profile
 
-Open the **iPhone Configuration Utilities** program.  Select **Configuration Profiles** click the **New** button, and fill out the sections as follows:
+Open the **iPhone Configuration Utilities** program.  Select **Configuration Profiles**, click the **New** button, and fill out the sections as follows:
  * General
    *  Name: A unique name for you to keep track of
    *  Identifier: **com.apple.mgmt...** string you recorded during certificate generation (see step 5 of the certificate setup instructions)
  * Certificates
-   * Use **vendor.p12** generated during certificate creation
-   * Password: Enter the password you used during certificate creation
+   * Use **vendor.p12** generated during certificate creation (should be in the /vendor-signing/com/softhinker/ directory)
+   * Password: Enter the PEM password you used during certificate creation
  * Mobile Device Management
    * Server URL: https://YOUR_HOSTNAME:8080/server
    * Check In URL: https://YOUR_HOSTNAME:8080/checkin
@@ -99,7 +99,7 @@ Finally, some versions of IPCU don't include the correct settings for all versio
 
 # Server Setup
 
-The server code based on and heavily takes from [Intrepidus Group's blackhat presentation](https://intrepidusgroup.com/).  Copy over the **mdm-server/server** directory you put the enrollment profile and certificates in to your server.
+The server code is based on and heavily takes from [Intrepidus Group's blackhat presentation](https://intrepidusgroup.com/).  Copy over the **mdm-server/server** directory you put the enrollment profile and certificates in to your server.
 
 You must have the following installed on the server:
   * Openssl
@@ -123,7 +123,7 @@ Once there you need to, in order:
  1. Tap *here* to install the CA Cert (for Server/Identity)
  2. Tap *here* to enroll in MDM (the device should appear after this step) 
  3. Select Command (DeviceLock is a good one to test) and check your device.  Click Submit to send the command.
- 4. If everything works, you're good to go!  As of right now some of the commands aren't fully implemented.  Feel free to experiment with different commands!
+ 4. If everything works, the device should lock and you're good to go!  As of right now some of the commands aren't fully implemented.  Feel free to experiment with different commands!
 
 ---
 ![Device Enrollment Steps](images/deviceEnroll.jpg)
@@ -135,7 +135,7 @@ You can now run those commands from any web browser, a successfull command will 
 ![Command Success](images/commandSuccess.png)
 ---
 
-Click the "Response" button to see the plist response from apple.
+Click the "Response" button to see the plist response from apple.  Click the pencil to edit the device name, device owner, and device location.
 
 
 # Client Reporting
