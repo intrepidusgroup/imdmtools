@@ -24,9 +24,7 @@ Instructions and code for setting up a simple iOS Mobile Device Management (MDM)
  2. Go to Apple's [iOS Provisioning Portal](Apple Member Center). Upload **customer.csr** in the **/scripts** folder on the iOS Provisioning Portal.
    * You will be given the option to download a .cer file.  Do so and name this file something along the lines of YOUR_MDM.cer.  
    * Run the following openssl command in your terminal and then move the generated mdm.pem file to **/vendor-signing/com/softhinker** (it should replace an empty file of the same name).
-```
-openssl x509 -inform der -in YOUR_MDM.cer -out mdm.pem
-```
+     * <code>openssl x509 -inform der -in YOUR_MDM.cer -out mdm.pem</code>
  3. Find **Test.java** in the **/vendor-signing/com/softhinker** folder.  On line 95, replace the word *test* with the PEM password that you used when running make_certs.sh.
    * Replace only the word test so that your password is still in quotes.
  4. Run the **vendor-signing.sh** script found in the **/scripts** directory.
