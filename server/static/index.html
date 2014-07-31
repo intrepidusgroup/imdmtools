@@ -94,7 +94,6 @@
 
     <script>
     function update(dev_list, last_cmd, last_result, problems){
-      //console.log("In function update()");
       // Re-populate devices list
       x = document.getElementById("devices");
 
@@ -111,7 +110,6 @@
       // This should only be executed if we have changes to device list
       // Check current devices for selections and update new device list so selections are not lost
       var isSelected = false;
-      //console.log("Reached need to update devices area");
       for(j=0;j<dev_list.length;j++){
         isSelected = false;
         for(i=0;i<x.options.length;i++){
@@ -121,7 +119,6 @@
           }
         }
         // Add variables to dev_list to reflect selected
-        // TODO: defaultselected is always false and is optional - remove it while keeping selected
         if(isSelected){
           dev_list[j].push(false);
           dev_list[j].push(true);
@@ -145,7 +142,8 @@
     function populate_devices(){
       // Populates device accordion using data from server
       $.post("/devices", function(raw){
-        
+
+        //Check if any changes have been made        
         if(checksum == JSON.stringify(raw)){
           return;
         }
@@ -159,7 +157,6 @@
           $('#accordion').html(rendered);
 
           // Set response button on click to update the modal
-          // May need to add a specific class for response if adding retry/cancel buttons
           $(".response-btn").click(function(event){
             // Get device UDID and command UUID
             var udid = $(this).closest(".panel").attr("id");
@@ -233,10 +230,10 @@
     }
 
     $(document).ready(function(){
-      // Initial setup and start polling
+      // Initial setup
       update_cmds()
 
-      // Temporary version of "update()" until scalable solution found
+      // Start polling
       populate_devices();
       setInterval(populate_devices, 2000);
 
@@ -246,9 +243,11 @@
         document.getElementById("showCert").style.display="block";
       }
 
+      // Submit button functionality
       $("#submit1").click(function(event){
         var checked_devices = [];
 
+        //Get all selected devices
         $(".row_box").each(function(){
           if(this.checked){
             checked_devices.push($(this).closest(".panel").attr("id"));
@@ -272,8 +271,9 @@
 
           // Use stringify to fix odd error with passing just parameters
           $.post("/queue", JSON.stringify(parameters), function(){
+
+          //reenable data method if switching back to update()
           //$.post("/queue", JSON.stringify(parameters), function(data){
-            //reenable data if switching back to update()
             //data = JSON.parse(data);
             //update(data["dev_list"], data["last_cmd"], data["last_result"], data["problems"]);
           });
