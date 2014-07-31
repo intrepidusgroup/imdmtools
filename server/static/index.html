@@ -24,9 +24,7 @@
   </head>
 
   <body>
-
-
-  <div class="container">    
+    <div class="container">    
       <div id="showEnroll" style="display:none" class="row col-sm-6" align="center">Tap <a href='/enroll'>here</a> to <br/>enroll in MDM</div>
       <div id="showCert" style="display:none" class="row col-sm-6" align="center">Tap <a href='/ca'>here</a> to install the <br/> CA Cert (for Server/Identity)</div>
 
@@ -35,32 +33,29 @@
         <p class="lead">Choose a command to send to one or more enrolled devices.</p>
       </div>
 
-
       <div class="row">
         <div class="col-md-4 text-center">
           <br>
           <select class="form-control" id="commands" name="command">
             <span class="col-md-4"></span>
             <option value=''>Select command</option>
-            </select>
+          </select>
         </div><!-- /.col-md-4 -->
 
-        <!--Hidden dropdown will goes here-->
         <div class="col-md-4 text-center">
-
+        <!--Hidden dropdown for selecting payload will goes here-->
         </div><!-- /.col-md-4 -->
 
 
         <div class="col-md-4 text-center">
           <br>
-          <input class="btn btn-large btn-primary" id="submit1" type="submit"/>
+          <input class="btn btn-large btn-primary" id="submitcmd" type="submit"/>
         </div><!-- /.col-md-4 -->
       </div><!-- /.row -->
 
       <br><br><br>
 
-      <div class="panel-group" id="accordion">
-      </div>
+      <div class="panel-group" id="accordion"></div>
 
 
       <!-- Modal to hold response or other command-specific info -->
@@ -80,207 +75,17 @@
           </div>
         </div>
       </div>
-
-
     </div><!-- /.container -->
 
 
-    <!-- Bootstrap core JavaScript
-    ================================================== -->
+    <!-- Javascript libraries and scripts -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script src="./dist/js/jquery-1.11.0.min.js"></script>
     <script src="./dist/js/bootstrap.min.js"></script>
     <script src="./dist/js/mustache.min.js"></script>
-
-    <script>
-    function update(dev_list, last_cmd, last_result, problems){
-      // Re-populate devices list
-      x = document.getElementById("devices");
-
-      if(dev_list.length == x.options.length){
-        var is_same = true;
-        for(i=0;i<dev_list.length;i++){
-      	  if(dev_list[i][1] != x.options[i].value){
-            is_same = false;
-          }
-        }
-        if(is_same){return;}
-      }
-
-      // This should only be executed if we have changes to device list
-      // Check current devices for selections and update new device list so selections are not lost
-      var isSelected = false;
-      for(j=0;j<dev_list.length;j++){
-        isSelected = false;
-        for(i=0;i<x.options.length;i++){
-          if(x.options[i].selected && x.options[i].value==dev_list[j][1]){
-            isSelected = true;
-            break;
-          }
-        }
-        // Add variables to dev_list to reflect selected
-        if(isSelected){
-          dev_list[j].push(false);
-          dev_list[j].push(true);
-        }
-        else{
-          dev_list[j].push(false);
-          dev_list[j].push(false);
-        }
-      }
-
-      // Populate device list with new data
-      x.options.length = 0;
-      for(i=0;i<dev_list.length;i++){
-        x.options[x.options.length] = new Option(dev_list[i][0], dev_list[i][1], dev_list[i][2], dev_list[i][3]);
-      }
-    }
-
-    // Global variable to avoid changing device list if there are no changes to it
-    var checksum = ''
-
-    function populate_devices(){
-      // Populates device accordion using data from server
-      $.post("/devices", function(raw){
-
-        //Check if any changes have been made        
-        if(checksum == JSON.stringify(raw)){
-          return;
-        }
-        else{
-          checksum = JSON.stringify(raw);
-        }
-
-        // Use mustache to populate the accordion
-        $.get("devices.mustache.html", function(template){
-          var rendered = Mustache.render(template, jQuery.parseJSON(raw));
-          $('#accordion').html(rendered);
-
-          // Set response button on click to update the modal
-          $(".response-btn").click(function(event){
-            // Get device UDID and command UUID
-            var udid = $(this).closest(".panel").attr("id");
-            var uuid = $(this).attr("id");
-
-            // Access /response to get the response string
-            $.post("/response", JSON.stringify({"UDID":udid, "UUID":uuid}), function(data){
-              $("#modal_body").html(data);
-            });
-          });
-
-          // Puts HTML content inside the popover
-          $(".trigger").popover({
-            html: true,
-            title: function () {
-              return $(this).parent().find('.head').html();
-            },
-            content: function () {
-              return $(this).parent().find('.content').html();
-            }
-          });
-
-          // Submit input group when submit button clicked
-          $('body').on('click', '.popover-submit', function(){
-            // Get UDID and form values
-            var udid = $(this).attr("id");
-            var name = $(this).parent().find("#input-name").val();
-            var owner = $(this).parent().find("#owner-name").val();
-            var location = $(this).parent().find("#location-name").val();
-
-            // POST data to /metadata endpoint
-            $.post("/metadata", JSON.stringify({"UDID":udid,"name":name,"owner":owner,"location":location}), function(){});
-
-            $("#metadatapopover".concat(udid)).popover("hide");
-
-          });
-
-
-        });
-      });
-    }
-
-    function update_cmds(){
-      // Populate command list
-      $.post("/getcommands", function(cmd_list){
-        cmds = JSON.parse(cmd_list);
-        x = document.getElementById("commands");
-        x.options.length = 0
-        x.options[x.options.length] = new Option("Select Command", "", true, false);
-        for(i=0;i<cmds.length;i++){
-          x.options[x.options.length] = new Option(cmds[i][0], cmds[i][1]);
-        }
-      });
-    }
-
-    function poll(){
-      // Polling function to allow for data-driven page
-      $.post("/poll", function(data){
-        data = JSON.parse(data);
-        update(data["dev_list"], data["last_cmd"], data["last_result"], data["problems"]);
-      });
-    }
-
-    function checkDevice(){
-      // Returns true if site is accessed using an iDevice
-      var agent   = navigator.userAgent;
-      if (agent.match(/(iPhone|iPod|iPad)/)){
-        return true;
-      }
-      return false;
-    }
-
-    $(document).ready(function(){
-      // Initial setup
-      update_cmds()
-
-      // Start polling
-      populate_devices();
-      setInterval(populate_devices, 2000);
-
-      // Check for device-specific content and enable if applicable
-      if(checkDevice()){
-        document.getElementById("showEnroll").style.display="block";
-        document.getElementById("showCert").style.display="block";
-      }
-
-      // Submit button functionality
-      $("#submit1").click(function(event){
-        var checked_devices = [];
-
-        //Get all selected devices
-        $(".row_box").each(function(){
-          if(this.checked){
-            checked_devices.push($(this).closest(".panel").attr("id"));
-          }
-        });
-
-        // Input checking.
-        if ($("#commands").val()==0){
-          alert("Please choose a command.");
-        }
-        else if (checked_devices.length==0){
-          alert("Please choose one or more devices.");
-        }
-        else{
-          // Send AJAX request
-          // Variable to pass all necessary data to server
-          var parameters = {
-            "cmd":$("#commands").val(),
-            "dev[]":checked_devices
-          };
-
-          // Use stringify to fix odd error with passing just parameters
-          $.post("/queue", JSON.stringify(parameters), function(){
-
-          //reenable data method if switching back to update()
-          //$.post("/queue", JSON.stringify(parameters), function(data){
-            //data = JSON.parse(data);
-            //update(data["dev_list"], data["last_cmd"], data["last_result"], data["problems"]);
-          });
-        }
-      });
-    });
-    </script>
+    <script type="text/javascript" src="dist/js/setup.js"></script>
+    <script type="text/javascript" src="dist/js/populate.js"></script>
+    <script type="text/javascript" src="dist/js/main.js"></script>
 
   </body>
 </html>
