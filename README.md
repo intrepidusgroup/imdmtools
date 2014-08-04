@@ -138,11 +138,11 @@ Click the "Response" button to see the plist response from apple.  Click the pen
 
 When stopping the server, the standard control-c doesn't usually work.  Instead use control-z to suspend the process and then use a kill command to end the process.
 
-    **^z**
+    ^z
     [1]+  Stopped                 python server.py
-    $:~/mdm-server/server$ **kill %1**
+    user:~/mdm-server/server$ kill %1
     [1]+  Terminated              python server.py
-    $:~/mdm-server/server$ 
+    user:~/mdm-server/server$ 
 
 The server uses the pickle library to save devices.  When the device class is updated, the pickle format may be invalidated, causing the server to error.  In order to fix this, remove the devicelist.pickle file (make a backup just in case!) and re-enroll all devices.
 
