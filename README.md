@@ -136,6 +136,16 @@ You can now run those commands from any web browser, a successfull command will 
 Click the "Response" button to see the plist response from apple.  Click the pencil to edit the device name, device owner, and device location.
 
 
+When stopping the server, the standard control-c doesn't usually work.  Instead use control-z to suspend the process and then use a kill command to end the process.
+
+    ^z
+    [1]+  Stopped                 python server.py
+    user:~/mdm-server/server$ kill %1
+    [1]+  Terminated              python server.py
+    user:~/mdm-server/server$ 
+
+The server uses the pickle library to save devices.  When the device class is updated, the pickle format may be invalidated, causing the server to error.  In order to fix this, remove the devicelist.pickle file (make a backup just in case!) and re-enroll all devices.
+
 # Client Reporting
 
 The MDM server also has REST endpoints for reporting issues and geolocation data from the enrolled clients.  This functionality may be used at a later point in time by a security app. The API can be imported into any project as follows:
