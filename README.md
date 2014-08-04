@@ -24,15 +24,13 @@ Instructions and code for setting up a simple iOS Mobile Device Management (MDM)
  2. Go to Apple's [iOS Provisioning Portal](Apple Member Center). Upload **customer.csr** in the **/scripts** folder on the iOS Provisioning Portal.
    * You will be given the option to download a .cer file.  Do so and name this file something along the lines of YOUR_MDM.cer.  
    * Run the following openssl command in your terminal and then move the generated mdm.pem file to **/vendor-signing/com/softhinker** (it should replace an empty file of the same name).
-
-    openssl x509 -inform der -in YOUR_MDM.cer -out mdm.pem
-
+     * <code>openssl x509 -inform der -in YOUR_MDM.cer -out mdm.pem</code>
  3. Find **Test.java** in the **/vendor-signing/com/softhinker** folder.  On line 95, replace the word *test* with the PEM password that you used when running make_certs.sh.
    * Replace only the word test so that your password is still in quotes.
  4. Run the **vendor-signing.sh** script found in the **/scripts** directory.
    * There now should be a file named plist_encoded located in **/vendor-signing**.
  5. Go to [Apple's Push Certificates Portal](https://identity.apple.com/pushcert/) and upload the plist_encoded file.  Download the certificate as **PushCert.pem** and place it within the **/server** directory.
-   * Notice the (i) icon beside the renew option.  If you click it there will be a long string of text ending in **UID=com.apple.mgmt...**, make sure to copy that string starting at **com** since you will need it later.
+   * Notice the (i) icon beside the renew option.  If you click it there will be a long string of text ending in **UID=com.apple.mgmt...**, make sure to copy that string starting at **com** since you will need it later on in the enrollment process.
 
 ![Apple Portal](images/certPortal.png)
 
@@ -67,17 +65,17 @@ After generating certificates and placing your PEM password in line 95 of Test.j
 
 # Enrollment profile
 
-Open the **iPhone Configuration Utilities** program.  Select **Configuration Profiles** click the **New** button, and fill out the sections as follows:
+Open the **iPhone Configuration Utilities** program.  Select **Configuration Profiles**, click the **New** button, and fill out the sections as follows:
  * General
    *  Name: A unique name for you to keep track of
-   *  Identifier: **com.apple.mgmt...** string you recorded during certificate generation
+   *  Identifier: **com.apple.mgmt...** string you recorded during certificate generation (see step 5 of the certificate setup instructions)
  * Certificates
-   * Use **vendor.p12** generated during certificate creation
-   * Password: Enter the password you used during certificate creation
+   * Use **vendor.p12** generated during certificate creation (should be in the /vendor-signing/com/softhinker/ directory)
+   * Password: Enter the PEM password you used during certificate creation
  * Mobile Device Management
    * Server URL: https://YOUR_HOSTNAME:8080/server
    * Check In URL: https://YOUR_HOSTNAME:8080/checkin
-   * Topic: **com.apple.mgmt...** string
+   * Topic: **com.apple.mgmt...** string (same as General->Identifier)
    * Identity: vendor.p12
    * Sign messages: Checked
    * Check out when removed: Unchecked
@@ -99,7 +97,7 @@ Finally, some versions of IPCU don't include the correct settings for all versio
 
 # Server Setup
 
-The server code based on and heavily takes from [Intrepidus Group's blackhat presentation](https://intrepidusgroup.com/).  Copy over the **mdm-server/server** directory you put the enrollment profile and certificates in to your server.
+The server code is based on and heavily takes from [Intrepidus Group's blackhat presentation](https://intrepidusgroup.com/).  Copy over the **mdm-server/server** directory you put the enrollment profile and certificates in to your server.
 
 You must have the following installed on the server:
   * Openssl
@@ -123,7 +121,7 @@ Once there you need to, in order:
  1. Tap *here* to install the CA Cert (for Server/Identity)
  2. Tap *here* to enroll in MDM (the device should appear after this step) 
  3. Select Command (DeviceLock is a good one to test) and check your device.  Click Submit to send the command.
- 4. If everything works, you're good to go!  As of right now some of the commands aren't fully implemented.  Feel free to experiment with different commands!
+ 4. If everything works, the device should lock and you're good to go!  As of right now some of the commands aren't fully implemented.  Feel free to experiment with different commands!
 
 ---
 ![Device Enrollment Steps](images/deviceEnroll.jpg)
@@ -135,7 +133,7 @@ You can now run those commands from any web browser, a successfull command will 
 ![Command Success](images/commandSuccess.png)
 ---
 
-Click the "Response" button to see the plist response from apple.
+Click the "Response" button to see the plist response from apple.  Click the pencil to edit the device name, device owner, and device location.
 
 
 # Client Reporting

@@ -466,8 +466,12 @@ class get_response:
         global device_list
         
         i = json.loads(web.data())
+        try:
+            return device_list[i['UDID']].getResponse(i['UUID'])
+        except:
+            print "ERROR: Unable to lookup response by command UUID"
+            return "ERROR: Unable to retrieve response"
 
-        return device_list[i['UDID']].getResponse(i['UUID'])
 
 class dev_tab:
     def POST(self):
