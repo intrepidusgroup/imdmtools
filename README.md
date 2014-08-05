@@ -49,7 +49,7 @@ In the vendor-signing directory, under com/softhinker, you will notice several c
    * Apple's WWDR intermediate certificate
  * mdm.pem
    * Must be replaced
-   * Obtain from [iOS Provisioning Portal](Apple Member Center)
+   * Obtain from [iOS Provisioning Portal](Apple Member Center). You need to have a developer account with Apple beforehand. Once you do you can locate the area here: https://developer.apple.com/account/ios/profile/profileList.action
    * Use **customer.csr** created by **make_certs.sh**
    * Download the file, should be in .cer format
    * Convert to pem: **openssl x509 -inform der -in YOUR_MDM.cer -out mdm.pem**
