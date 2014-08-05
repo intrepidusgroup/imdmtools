@@ -107,6 +107,11 @@ class device:
                 for i in range(len(temp_cmd['response']['ProvisioningProfileList'])):
                     temp_cmd['response']['ProvisioningProfileList'][i]['ExpiryDate'] = temp_cmd['response']['ProvisioningProfileList'][i]['ExpiryDate'].strftime("%Y-%m-%d %H:%M:%S") + " UTC"
                 d['commands'].append(temp_cmd)
+            elif 'InstallProfile' == self.cmdList[tuple[1]]['cmd']['Command']['RequestType']:
+                #Remove payload data from output
+                temp_cmd = copy.deepcopy(self.cmdList[tuple[1]])
+                temp_cmd['cmd']['Command']['Payload'] = 'Redacted by server'
+                d['commands'].append(temp_cmd)
 
             else:
                 d['commands'].append(self.cmdList[tuple[1]])

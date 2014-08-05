@@ -22,7 +22,7 @@
 			<key>allowAddingGameCenterFriends</key>
 			<true/>
 			<key>allowAppInstallation</key>
-			<false/>
+			<true/>
 			<key>allowCamera</key>
 			<true/>
 			<key>allowExplicitContent</key>
@@ -32,19 +32,19 @@
 			<key>allowInAppPurchases</key>
 			<true/>
 			<key>allowMultiplayerGaming</key>
-			<false/>
-			<key>allowSafari</key>
-			<false/>
-			<key>allowScreenShot</key>
 			<true/>
+			<key>allowSafari</key>
+			<true/>
+			<key>allowScreenShot</key>
+			<false/>
 			<key>allowVideoConferencing</key>
 			<true/>
 			<key>allowVoiceDialing</key>
 			<true/>
 			<key>allowYouTube</key>
-			<false/>
+			<true/>
 			<key>allowiTunes</key>
-			<false/>
+			<true/>
 			<key>forceEncryptedBackup</key>
 			<false/>
 			<key>ratingApps</key>
