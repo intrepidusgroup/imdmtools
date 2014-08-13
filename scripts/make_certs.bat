@@ -39,11 +39,19 @@ openssl req -inform pem -outform der -in identity.csr -out customer.der
 copy Identity.p12 ..\vendor-signing\com\softhinker\vendor.p12
 copy customer.der ..\vendor-signing\com\softhinker\customer.der
 
+echo 8. Making the Apple Certificate useble by python
+openssl x509 -inform der -in AppleWWDRCA.cer -out intermediate.pem
+openssl x509 -inform der -in AppleIncRootCertificate.cer -out root.pem
+
+cp intermediate.pem ..\..\vendor-signing\com\softhinker\intermediate.pem
+cp root.pem ..\..\vendor-signing\com\softhinker\root.pem
+
 echo DONE!!
 goto end
 
 :INBUILTCA
 echo place CA Certificate and CA Key and then press enter. NOTE: you should have the password of the certificate.
+
 @pause
 goto CONT
 
