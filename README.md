@@ -7,7 +7,7 @@ Instructions and code for setting up a simple iOS Mobile Device Management (MDM)
  * Publicly accessible Linux/Unix server
  * Apple Enterprise Account
  * Apple Developer Account
- * Python 2.7
+ * Python 2.7 (See Server Setup for libraries)
  * openssl command-line
  * Java SDK (java/javac)
  * Apple's iPhone Configuration Utility
@@ -106,8 +106,23 @@ You must have the following installed on the server:
     * Source available at [http://www.openssl.org/source/](http://www.openssl.org/source/)
   * Python 2.7, with the following libraries
      * [web.py](http://webpy.org/)
-     * [M2Crypto](http://chandlerproject.org/bin/view/Projects/MeTooCrypto)
+     * [M2Crypto](https://pypi.python.org/pypi/M2Crypto)
      * [PyOpenSSL](https://pypi.python.org/pypi/pyOpenSSL)
+     * [APNSWrapper](https://pypi.python.org/pypi/APNSWrapper)
+       * APNSWrapper appears to be inactive
+       * On 22 October 2014, [Apple removed support for SSLv3](https://developer.apple.com/news/?id=10222014a), which APNSWrapper uses, due to the poodle vulnerability
+       * As a temporary solution, users need to edit line 131 of connections.py of the source code of APNSWrapper
+       * Change "SSLv3" to "TLSv1", so that the line reads:
+       ```python
+         ssl_version = self.ssl_module.PROTOCOL_TLSv1,
+       ```
+       * After making the change, users should install the library using:
+
+       ```bash
+         python setup.py install
+       ```
+       
+       * More information will follow as we find a better solution
 
 Network Settings
   * Outbound access to gateway.push.apple.com:2195
