@@ -31,24 +31,24 @@ echo 6. Copying keys and certs to server folder
 copy server.key ..\server\Server.key
 copy server.crt ..\server\Server.crt
 copy cacert.crt ..\server\CA.crt
+copy identity.crt ..\server\identity.crt
 copy identity.p12 ..\server\Identity.p12
 
 
-echo  7. Generating keys and certs for plist generation
-openssl req -inform pem -outform der -in identity.csr -out customer.der
+#echo  7. Generating keys and certs for plist generation
+#openssl req -inform pem -outform der -in identity.csr -out customer.der
+## Rename identity.csr to be used with the iOS Provisioning Portal
+#rename identity.csr customer.csr
 
-# Rename identity.csr to be used with the iOS Provisioning Portal
-rename identity.csr customer.csr
+#copy Identity.p12 ..\vendor-signing\com\softhinker\vendor.p12
+#copy customer.der ..\vendor-signing\com\softhinker\customer.der
 
-copy Identity.p12 ..\vendor-signing\com\softhinker\vendor.p12
-copy customer.der ..\vendor-signing\com\softhinker\customer.der
+#echo 8. Making the Apple Certificate useble by python
+#openssl x509 -inform der -in AppleWWDRCA.cer -out intermediate.pem
+#openssl x509 -inform der -in AppleIncRootCertificate.cer -out root.pem
 
-echo 8. Making the Apple Certificate useble by python
-openssl x509 -inform der -in AppleWWDRCA.cer -out intermediate.pem
-openssl x509 -inform der -in AppleIncRootCertificate.cer -out root.pem
-
-cp intermediate.pem ..\..\vendor-signing\com\softhinker\intermediate.pem
-cp root.pem ..\..\vendor-signing\com\softhinker\root.pem
+#cp intermediate.pem ..\..\vendor-signing\com\softhinker\intermediate.pem
+#cp root.pem ..\..\vendor-signing\com\softhinker\root.pem
 
 echo DONE!!
 goto end

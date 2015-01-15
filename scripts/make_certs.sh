@@ -2,7 +2,7 @@
 
 echo ""
 echo "Setting up server.cnf."
-echo "Please enter the IP address of your server."
+echo "Please enter the Hostname or IP address of your server."
 read IP
 sed -i -e "s/<SERVER_IP>/$IP/g" server.cnf
 echo "Done."
@@ -56,23 +56,26 @@ mv cacert.crt ../server/CA.crt
 mv identity.crt ../server/identity.crt
 cp identity.p12 ../server/Identity.p12
 
-echo "7. Generating keys and certs for plist generation"
-echo ""
-openssl req -inform pem -outform der -in identity.csr -out customer.der
+#######################################
+# Removed with softhinker vendor code #
+#######################################
+
+#echo "7. Generating keys and certs for plist generation"
+#echo ""
+#openssl req -inform pem -outform der -in identity.csr -out customer.der
 # Rename identity.csr to be used with the iOS Provisioning Portal
-mv identity.csr customer.csr
+#mv identity.csr customer.csr
 
-echo ""
-echo "8. Getting Apple certificates online"
-curl https://developer.apple.com/certificationauthority/AppleWWDRCA.cer -ko AppleWWDRCA.cer
-curl http://www.apple.com/appleca/AppleIncRootCertificate.cer -o AppleIncRootCertificate.cer
-
-openssl x509 -inform der -in AppleWWDRCA.cer -out intermediate.pem
-openssl x509 -inform der -in AppleIncRootCertificate.cer -out root.pem
+#echo ""
+#echo "8. Getting Apple certificates online"
+#curl https://developer.apple.com/certificationauthority/AppleWWDRCA.cer -ko AppleWWDRCA.cer
+#curl http://www.apple.com/appleca/AppleIncRootCertificate.cer -o AppleIncRootCertificate.cer
+#openssl x509 -inform der -in AppleWWDRCA.cer -out intermediate.pem
+#openssl x509 -inform der -in AppleIncRootCertificate.cer -out root.pem
 
 # Move relevant files for use in softhinker vendor-signing
 # Need to manually generate and move mdm.pem
-mv intermediate.pem ../vendor-signing/com/softhinker/intermediate.pem
-mv root.pem ../vendor-signing/com/softhinker/root.pem
-mv identity.p12 ../vendor-signing/com/softhinker/vendor.p12
-mv customer.der ../vendor-signing/com/softhinker/customer.der
+#mv intermediate.pem ../vendor-signing/com/softhinker/intermediate.pem
+#mv root.pem ../vendor-signing/com/softhinker/root.pem
+#mv identity.p12 ../vendor-signing/com/softhinker/vendor.p12
+#mv customer.der ../vendor-signing/com/softhinker/customer.der
