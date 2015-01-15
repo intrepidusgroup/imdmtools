@@ -1,11 +1,7 @@
 STEP 1) Download Openssl and add the folder to system path.
 Make sure that openSSL can be executed from any directory
 
-STEP 2)
-Download the files and place it in the scripts directory
-
-https://developer.apple.com/certificationauthority/AppleWWDRCA.cer
-http://www.apple.com/appleca/AppleIncRootCertificate.cer
+STEP 2) Update server.cnf with your IP address or hostname.  Replace <SERVER_IP> with this information.
 
 Step 3)
 Run make_certs.bat
