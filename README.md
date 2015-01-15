@@ -53,7 +53,7 @@ Instructions and code for setting up a simple iOS Mobile Device Management (MDM)
     * These files will be used in the next step.
 
  6. Use the mdmvendorsign tool to create applepush.csr
-    * Copy private.key, push.csr, and mdm.cer into vendor/mdmvendorsign
+    * Copy private.key, push.csr, and mdm.cer into /vendor/
     * Run the following command while in that directory:
     python mdm_vendorpython mdm_vendor_sign.py –key private.key –csr push.csr –mdm mdm.cer –out applepush.csr
     * This should generate applepush.csr.
@@ -219,8 +219,12 @@ This project also uses code from various sources under various licenses.
 
 [The original code from the Intrepidus Group's python server is under the BSD License found here.](server/LICENSE)
 
+[The python vendor signing code is located here and is under the MIT license.](https://github.com/grinich/mdmvendorsign)
+
 [The Softhinker certificate signing code is under the Apache License found here.](vendor-signing/LICENSE)
 
 [The website's Bootstrap code is under the MIT License found here.](server/static/dist/LICENSE)
+
+The certificate setup instructions were based on [this blog post](http://www.blueboxmoon.com/wordpress/?p=877).  Our thanks to Daniel.
 
 Finally we use some free [glyphicons](http://glyphicons.com/) that are included with bootstrap.
