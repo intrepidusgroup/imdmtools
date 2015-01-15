@@ -43,19 +43,35 @@ Instructions and code for setting up a simple iOS Mobile Device Management (MDM)
 
  5. Extract MDM private key and MDM Vendor Certificate
     * Extract private key using the following command:
+
     openssl pkcs12 -in private.p12 -nocerts -out key.pem
+
     * Strip the password from the private key using the following command:
+
     openssl rsa -in key.pem out private.key
+
     * Extract certificate using the following command:
+
     openssl pkcs12 -in private.p12 -clcerts -nokeys -out cert.pem
+
     * Convert certificate to DES using the following command:
+
     openssl x509 -in cert.pem -inform PEM -out mdm.cer -outform DES
+
     * These files will be used in the next step.
 
  6. Use the mdmvendorsign tool to create applepush.csr
+    * We're going to use the python code located in /vendor/.  If /vendor/ is currently empty, you probably forgot to init and update submodules
+
+    git submodule init 
+    git submodule update
+    
     * Copy private.key, push.csr, and mdm.cer into /vendor/
+
     * Run the following command while in that directory:
+
     python mdm_vendorpython mdm_vendor_sign.py –key private.key –csr push.csr –mdm mdm.cer –out applepush.csr
+
     * This should generate applepush.csr.
 
  7. Get Push Certificate from Apple
@@ -70,7 +86,9 @@ Instructions and code for setting up a simple iOS Mobile Device Management (MDM)
     * Copy down the User ID which should look like com.apple.mgmt.External.hexstuffhere...  We will use it later on in step 9.
     * Right-click the certificate and select *Export...* and save it as mdm.p12
     * Run the following command to convert it to a pem file:
+
     openssl pkcs12 -in mdm.p12 -out PushCert.pem -nodes
+
     * Move the resulting PushCert.pem file to /server/
 
  9. Generate additional certs
