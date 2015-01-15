@@ -14,85 +14,95 @@ Instructions and code for setting up a simple iOS Mobile Device Management (MDM)
     * [OS X Version](http://support.apple.com/kb/dl1465)
     * [Windows Version](http://support.apple.com/kb/DL1466)
 
-# Certificate Setup
+# Setup
 
-### Instructions
+ 1. Create MDM Vendor CSR
+    * Open Keychain Access.
+    * Go to the menu bar: Keychain Access -> Certificate Assistant -> Request a Certificate From a Certificate Authority.
+    * Use the same email as the developer account that will be used.  Enter in a common name as well.
+    * Select *Saved to disk*.  
 
- 1. Run **make_certs.sh**, which can be found in the **/scripts** directory.
-   * Carefully read the directions given for each step and follow the instructions
-   * This should generate several certificates needed to move forward to the next step.  See the Explanation section for more details.
- 2. Go to Apple's [iOS Provisioning Portal](Apple Member Center). Upload **customer.csr** in the **/scripts** folder on the iOS Provisioning Portal.
-   * You will be given the option to download a .cer file.  Do so and name this file something along the lines of YOUR_MDM.cer.  
-   * Run the following openssl command in your terminal and then move the generated mdm.pem file to **/vendor-signing/com/softhinker** (it should replace an empty file of the same name).
-     * <code>openssl x509 -inform der -in YOUR_MDM.cer -out mdm.pem</code>
- 3. Find **Test.java** in the **/vendor-signing/com/softhinker** folder.  On line 95, replace the word *test* with the PEM password that you used when running make_certs.sh.
-   * Replace only the word test so that your password is still in quotes.
- 4. Run the **vendor-signing.sh** script found in the **/scripts** directory.
-   * There now should be a file named plist_encoded located in **/vendor-signing**.
- 5. Go to [Apple's Push Certificates Portal](https://identity.apple.com/pushcert/) and upload the plist_encoded file.  Download the certificate as **PushCert.pem** and place it within the **/server** directory.
-   * Notice the (i) icon beside the renew option.  If you click it there will be a long string of text ending in **UID=com.apple.mgmt...**, make sure to copy that string starting at **com** since you will need it later on in the enrollment process.
+ 2. Upload CSR to Apple
+    * Go to [Apple's Certificates, Identifiers & Profiles page](https://developer.apple.com/account/ios/certificate/certificateCreate.action).
+    * Select MDM CSR under Production.  If this option is disabled, you will need to contact apple to enable it.  You can either email apple at devprograms@apple.com or go through the [online contact menu](http://developer.apple.com/contact/).  In your message, indicate that you are looking to create an MDM Vendor Certificate and need the MDM CSR option enabled on the certificate creation page.  Apple should respond within one business day according to their contact page.  
+    * When you have the MDM CSR option available, select it and hit continue.  Hit continue again through Apple's description of how to create a CSR file (we already have one).
+    * Upload the .certSigningRequest file we created in step 1 and then hit generate.  A .cer file should be downloaded. Name it something like mdmvendor.cer.
 
-![Apple Portal](images/certPortal.png)
+ 3. Export MDM private key
+    * Open your mdmvendor.cer file in Keychain Access.
+    * Select Certificates from the left side.
+    * You should find your certificate listed as *MDM Vendor: Common Name*.
+    * There should be an arrow on that line that opens up show the MDM private key.
+    * Right-click the private key, select *Export...*, and save as private.p12
+    * Remember where you save this file, we will use it in step 5.
 
+ 4. Create Push Certificate CSR
+    * In Keychain Access, again select from the menu bar: Keychain Access -> Certificate Assistant -> Request a Certificate From a Certificate Authority.
+    * Enter your email (can be a different email) and a common name.
+    * Select *Saved to disk* and name it something like push.csr.
 
-### Explanation
+ 5. Extract MDM private key and MDM Vendor Certificate
+    * Extract private key using the following command:
+    openssl pkcs12 -in private.p12 -nocerts -out key.pem
+    * Strip the password from the private key using the following command:
+    openssl rsa -in key.pem out private.key
+    * Extract certificate using the following command:
+    openssl pkcs12 -in private.p12 -clcerts -nokeys -out cert.pem
+    * Convert certificate to DES using the following command:
+    openssl x509 -in cert.pem -inform PEM -out mdm.cer -outform DES
+    * These files will be used in the next step.
 
-In the scripts directory, there exists a server.cnf.  This is used for certificate generation and the first step of the script will place the server IP address in the correct place.
+ 6. Use the mdmvendorsign tool to create applepush.csr
+    * Copy private.key, push.csr, and mdm.cer into vendor/mdmvendorsign
+    * Run the following command while in that directory:
+    python mdm_vendorpython mdm_vendor_sign.py –key private.key –csr push.csr –mdm mdm.cer –out applepush.csr
+    * This should generate applepush.csr.
 
-In the vendor-signing directory, under com/softhinker, you will notice several certificates are included:
- * customer.der
-   * Must be replaced
-   * Generated from **make_certs.sh**
-   * Accept defaults for all other values (Including **Challenge password**)
- * intermediate.pem 
-   * Automatically replace by **make_certs.sh**
-   * Apple's WWDR intermediate certificate
- * mdm.pem
-   * Must be replaced
-   * Obtain from [iOS Provisioning Portal](Apple Member Center). You need to have a developer account with Apple beforehand. Once you do you can locate the area here: https://developer.apple.com/account/ios/profile/profileList.action
-   * Use **customer.csr** created by **make_certs.sh**
-   * Download the file, should be in .cer format
-   * Convert to pem: **openssl x509 -inform der -in YOUR_MDM.cer -out mdm.pem**
- * root.pem
-   * Automatically replace by **make_certs.sh**
-   * Apple's root certificate
- * vendor.p12
-   * Must be replaced
-   * Generated from **make_certs.sh**
+ 7. Get Push Certificate from Apple
+    * Go to [Apple's Push Certificates Portal](https://identity.apple.com/pushcert/) and click the Create a Certificate button.
+    * Upload applepush.csr to create a new entry in the table.
+    * Download the resulting push certificate.
+    * Open the push certificate in Keychain Access.
 
-After generating certificates and placing your PEM password in line 95 of Test.java, the vendor-signing.sh script will be run.  This script takes several scripts we have already generated and creates a plist for use with apple's push certificates portal.
+ 8. Prepare Push Certificate
+    * Find the push certificate in Keychain Access.  It should look like *APSP:hexstuffhere*.
+    * Right-click the certificate and select *Get Info*.
+    * Copy down the User ID which should look like com.apple.mgmt.External.hexstuffhere...  We will use it later on in step 9.
+    * Right-click the certificate and select *Export...* and save it as mdm.p12
+    * Run the following command to convert it to a pem file:
+    openssl pkcs12 -in mdm.p12 -out PushCert.pem -nodes
+    * Move the resulting PushCert.pem file to /server/
 
+ 9. Generate additional certs
+    * Go to the scripts directory and run make_certs.sh.
+    * This will generate a number of necessary certs to move forward.
+    * Certs will be automatically moved to their proper location in /server.
+    * We'll use identity.p12 in step 10 to create an Enroll.mobileconfig file
 
-# Enrollment profile
+ 10. Create Enroll.mobileconfig
+    * Open the iPhone Configuration Utilities program, select *Configuration Profiles*, and then click the *New* button.
+    * In the General category: Pick a name to identify the cert.  For Identifier, use the com.apple.mgmt.External.hexstuffhere that you copied down earlier.
+    * In the Credentials category, click configure and find your scripts/identity.p12 file generated in step 9. For password, we either use the PEM password or the export password - if the profile does not install, try the other option.  Please leave feedback with which worked. 
+    * For Mobile Device Management:
+      * Server URL: https://YOUR_HOSTNAME_OR_IP:8080/server
+      * Check In URL: https://YOUR_HOSTNAME_OR_IP:8080/checkin
+      * Topic: com.apple.mgmt... string (same as General->Identifier)
+      * Identity: identity.p12
+      * Sign messages: Checked
+      * Check out when removed: Unchecked
+      * Query device for: Check all that you want
+      * Add / Remove: Check all that you want
+      * Security: Check all that you want
+      * Use Development APNS server: Uncheck
+    * When done, click Export.  Choose None for security and then Export....
+    * Save the file as **Enroll**.  You will now have an Enroll.mobileconfig file - move it to the /server directory.
 
-Open the **iPhone Configuration Utilities** program.  Select **Configuration Profiles**, click the **New** button, and fill out the sections as follows:
- * General
-   *  Name: A unique name for you to keep track of
-   *  Identifier: **com.apple.mgmt...** string you recorded during certificate generation (see step 5 of the certificate setup instructions)
- * Certificates
-   * Use **vendor.p12** generated during certificate creation (should be in the /vendor-signing/com/softhinker/ directory)
-   * Password: Enter the PEM password you used during certificate creation
- * Mobile Device Management
-   * Server URL: https://YOUR_HOSTNAME:8080/server
-   * Check In URL: https://YOUR_HOSTNAME:8080/checkin
-   * Topic: **com.apple.mgmt...** string (same as General->Identifier)
-   * Identity: vendor.p12
-   * Sign messages: Checked
-   * Check out when removed: Unchecked
-   * Query device for: Check all that you want
-   * Add / Remove: Check all that you want
-   * Security: Check all that you want
-   * Use Development APNS server: Uncheck
+ 11. Cleanup
+    * Any additional files that are not in /server/ generated during this process are not necessary for running the server.  Some of them may have/be private keys or other unique information, so it is probably a good idea to protect or destroy those files.
+    * Most certs will be located in the /scripts/ folder.  There may be some generated from Keychain Access that were saved by the user and may be saved elsewhere.
+    * Please secure these files and prevent others from being able to access them.
 
-Your screen should be similar to the following:
-![Enrollment Configuration](images/enrollConfig.png)
-
-After you are finished, highlight the entry in the table, and click **Export**.  Choose **None** for security and then **Export...**.  The export window should look like:  
-![Enrollment Export](images/enrollExport.png)
-
-Save in the **mdm-server/server/** directory as **Enroll**.  You should now have an **Enroll.mobileconfig** file.
-
-Finally, some versions of IPCU don't include the correct settings for all versions of iOS.  Open the Enroll.mobileconfig file in a text editor.  Find the **AccessRights** key.  Make sure the value is 8191 (some versions of ICPU will use 2047, if you see this, change it to 8191) and then save.
+NOTE: UPDATING CERTIFICATE INSTRUCTIONS - WORK IN PROGRESS
 
 
 # Server Setup
