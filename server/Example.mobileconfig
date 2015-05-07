@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>PayloadContent</key>
+	<array>
+		<dict>
+			<key>PayloadDescription</key>
+			<string>Configures device restrictions.</string>
+			<key>PayloadDisplayName</key>
+			<string>Restrictions</string>
+			<key>PayloadIdentifier</key>
+			<string>com.intrepidusgroup.djs.test.simple.restrictions</string>
+			<key>PayloadOrganization</key>
+			<string></string>
+			<key>PayloadType</key>
+			<string>com.apple.applicationaccess</string>
+			<key>PayloadUUID</key>
+			<string>77D2FFB1-C010-4220-A3D9-BFE4B3EF99FD</string>
+			<key>PayloadVersion</key>
+			<integer>1</integer>
+			<key>allowAddingGameCenterFriends</key>
+			<true/>
+			<key>allowAppInstallation</key>
+			<true/>
+			<key>allowCamera</key>
+			<true/>
+			<key>allowExplicitContent</key>
+			<true/>
+			<key>allowGlobalBackgroundFetchWhenRoaming</key>
+			<true/>
+			<key>allowInAppPurchases</key>
+			<true/>
+			<key>allowMultiplayerGaming</key>
+			<true/>
+			<key>allowSafari</key>
+			<true/>
+			<key>allowScreenShot</key>
+			<false/>
+			<key>allowVideoConferencing</key>
+			<true/>
+			<key>allowVoiceDialing</key>
+			<true/>
+			<key>allowYouTube</key>
+			<true/>
+			<key>allowiTunes</key>
+			<true/>
+			<key>forceEncryptedBackup</key>
+			<false/>
+			<key>ratingApps</key>
+			<integer>1000</integer>
+			<key>ratingMovies</key>
+			<integer>1000</integer>
+			<key>ratingRegion</key>
+			<string>us</string>
+			<key>ratingTVShows</key>
+			<integer>1000</integer>
+		</dict>
+	</array>
+	<key>PayloadDescription</key>
+	<string>Very simple profile to test restrictions.</string>
+	<key>PayloadDisplayName</key>
+	<string>Very Simple Restriction Test</string>
+	<key>PayloadIdentifier</key>
+	<string>com.intrepidusgroup.djs.test.simple</string>
+	<key>PayloadOrganization</key>
+	<string></string>
+	<key>PayloadRemovalDisallowed</key>
+	<false/>
+	<key>PayloadType</key>
+	<string>Configuration</string>
+	<key>PayloadUUID</key>
+	<string>2D9490F4-E890-4B37-9062-7095FEF0E482</string>
+	<key>PayloadVersion</key>
+	<integer>1</integer>
+</dict>
+</plist>

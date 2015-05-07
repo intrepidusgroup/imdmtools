@@ -1,0 +1,18 @@
+# Python related files
+server/*.pyc
+
+# Logs/storage with possible sensitive information
+server/xactn.log
+server/devicelist.pickle
+
+# Certs with sensitive information
+server/CA.crt
+server/Enroll.mobileconfig
+server/Identity.p12
+server/PushCert.pem
+server/Server.*
+server/identity.crt
+
+# Custom payloads
+server/Manifest.plist
+server/MyApp.*

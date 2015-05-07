@@ -1,0 +1,62 @@
+{{#devices}}
+<div class="panel panel-{{status}}" id="{{UDID}}">
+  <div class="panel-heading">
+    <h4 class="panel-title">
+      <div class="col-sm-1">
+        <input class="row_box" UDID="{{UDID}}" type="checkbox" name="box" />
+      </div>
+      <a data-toggle="collapse" data-parent="#accordion" href="#collapse{{UDID}}">
+        <div class="row">
+          <div class="col-sm-4 {{status}}">{{name}}</div>
+          <div class="col-sm-3 {{status}}">{{owner}}</div>
+          <div class="col-sm-2 {{status}}">{{location}}</div>
+          <div class="col-sm-1">
+            <a data-toggle="popover" data-container="body" href="#popover{{UDID}}" id="metadatapopover{{UDID}}" class="trigger">
+              <span class="glyphicon glyphicon-pencil"/>
+            </a>
+            <div class="popover-markup" id="popover{{UDID}}">
+              <div class="head hide">Edit Metadata:</div>
+              <div class="content hide">
+                <div class="form-group">
+                  Device name:<input type="text" class="form-control" id="input-name" value="{{name}}" maxlength="32"/>
+                  Device owner:<input type="text" class="form-control" id="owner-name" value="{{owner}}" maxlength="32"/>
+                  Assigned location:<input type="text" class="form-control" id="location-name" value="{{location}}" maxlength="32"/>
+                </div>
+                <button type="submit" class="btn btn-sm btn-primary popover-submit" id="{{UDID}}">Submit</button>
+                <button data-toggle="clickover" class="btn btn-sm btn-primary" onclick='$("#metadatapopover{{UDID}}").popover("hide");'>Cancel</button>
+              </div>
+            </div>
+          </div><!--End col-sm-1-->
+        </div>
+      </a>
+    </h4>
+  </div>
+  <div class="panel-collapse collapse" id="collapse{{UDID}}">
+    <div class="panel-body">
+      <div class="col-sm-1"></div>
+      <div class="col-sm-4">UDID:<br>{{UDID}}</div>
+      <div class="col-sm-3">IP:<br>{{ip}}</div>
+      <div class="col-sm-3"><span class="glyphicon glyphicon-globe"></span> {{geo}}</div>
+    </div>
+
+    <table class="table table-condensed">
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Command</th>
+          <th>Options</th>
+        </tr>
+      </thead>
+      <tbody>
+{{#commands}}
+        <tr id="command{{response.CommandUUID}}">
+          <td><span class="glyphicon {{status}} glyphicon-certificate"></span></td>
+          <td>{{cmd.Command.RequestType}}</td>
+          <td><button type="button" class="btn btn-xs btn-primary response-btn" id="{{response.CommandUUID}}" data-toggle="modal" data-target="#modal">Response</button></td>
+        </tr>
+{{/commands}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{/devices}}
