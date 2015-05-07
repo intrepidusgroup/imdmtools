@@ -215,5 +215,5 @@ class device:
         for commandUUID in self.cmdList:
             if self.cmdList[commandUUID]['response'] == "" and now-self.cmdList[commandUUID]['cmd']['TimeStamp'] > self.TIMEOUT:
                 self.status = 2
-                self.cmdList[command['cmd']['CommandUUID']]['status'] = 'danger'
-                self.cmdList[command['cmd']['CommandUUID']]['response'] = {'Status':'TimeoutError'}
+                self.cmdList[cmd['CommandUUID']]['status'] = 'danger'
+                self.cmdList[cmd['CommandUUID']]['response'] = {'Status':'TimeoutError'}
