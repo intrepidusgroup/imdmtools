@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="MDM Server Control">
+    <meta name="author" content="Rory Thrasher">
+    <link rel="shortcut icon" href="../../assets/ico/favicon.ico">
+
+    <title>Open Source MDM Server</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="./dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="./dist/css/site-template.css" rel="stylesheet">
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+    <div class="container">    
+      <div id="showEnroll" style="display:none" class="row col-sm-6" align="center">Tap <a href='/enroll'>here</a> to <br/>enroll in MDM</div>
+      <div id="showCert" style="display:none" class="row col-sm-6" align="center">Tap <a href='/ca'>here</a> to install the <br/> CA Cert (for Server/Identity)</div>
+
+      <div class="site-template">
+        <h1>Open Source Mobile Device Management Server</h1>
+        <p class="lead">Choose a command to send to one or more enrolled devices.</p>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4 text-center">
+          <br>
+          <select class="form-control" id="commands" name="command">
+            <span class="col-md-4"></span>
+            <option value=''>Select command</option>
+          </select>
+        </div><!-- /.col-md-4 -->
+
+        <div class="col-md-4 text-center">
+        <!--Hidden dropdown for selecting payload will goes here-->
+        </div><!-- /.col-md-4 -->
+
+
+        <div class="col-md-4 text-center">
+          <br>
+          <input class="btn btn-large btn-primary" id="submitcmd" type="submit"/>
+        </div><!-- /.col-md-4 -->
+      </div><!-- /.row -->
+
+      <br><br><br>
+
+      <div class="panel-group" id="accordion"></div>
+
+
+      <!-- Modal to hold response or other command-specific info -->
+      <div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title" id="myModalLabel">Response:</h4>
+            </div>
+            <div class="modal-body" id="modal_body">
+              ...
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /.container -->
+
+
+    <!-- Javascript libraries and scripts -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="./dist/js/jquery-1.11.0.min.js"></script>
+    <script src="./dist/js/bootstrap.min.js"></script>
+    <script src="./dist/js/mustache.min.js"></script>
+    <script type="text/javascript" src="dist/js/setup.js"></script>
+    <script type="text/javascript" src="dist/js/populate.js"></script>
+    <script type="text/javascript" src="dist/js/main.js"></script>
+
+  </body>
+</html>

@@ -1,0 +1,38 @@
+For more documentation, please see the README file located in the root directory of this repository.
+
+
+ -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+                              Important  Files
+ -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+
+[required, included]
+favicon.ico             Replace with your website's icon
+server.py               The server itself
+device.py               A device class to support the server
+xactn.log               Log of commands and responses [initially empty]
+
+certs/make_certs.sh     Script to create the various certs and
+                        keys you'll need (uses OpenSSL)
+
+[required, need to get/create manually]
+PushCert.pem            Certificate and private key (no passphrase) for APNS
+                        See README in root directory for more instructions
+Enroll.mobileconfig     Use IPCU to create profile with MDM payload,
+                        used to enroll devices
+
+
+[required, created by make_cert.sh]
+CA.crt                  CA certificate used to sign the server cert
+                        [load onto device]
+Server.key              Private key (no passphrase) for SSL server
+Server.crt              Certificate for SSL server
+Identity.p12            Device identity cert (for MDM enrollment profile)
+
+
+[optional, to test installing custom apps]
+Example.mobileconfig    Sample profile to install (disables certain apps, etc.)
+MyApp.ipa               Bundle for a custom iOS app
+MyApp.mobileprovision   Mobile provisioning profile for the custom app
+Manifest.plist          Simple manifest for custom app 
+                        [Manifest.plist.template provided]

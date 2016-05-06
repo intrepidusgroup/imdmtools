@@ -1,0 +1,16 @@
+body {
+    padding-top: 50px;
+}
+.success{
+    color: #468847;
+}
+.warning{
+    color: #F89406;
+}
+.danger{
+    color: #B94A48;
+}
+.site-template {
+    padding: 40px 15px;
+    text-align: center;
+}
